@@ -320,6 +320,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
     promo.min = "1";
     promo.step = "1";
     promo.value = m.promoDivisor || 1;
+    promo.setAttribute("value", promo.value);
     promo.style.setProperty("--d", m.promoDivisor || 1);
     promo.dataset.model = m.name;
     promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
@@ -497,6 +498,7 @@ function setupCostListDelegation() {
     if (!model) return;
     const v = clamp(Number(promo.value) || 1, 1, 1000);
     model.promoDivisor = v;
+    promo.setAttribute("value", v);
     promo.style.setProperty("--d", v);
     saveModels();
     scheduleRender();

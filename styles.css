@@ -526,6 +526,7 @@
     }
 
     .cost-promo {
+        position: relative;
         width: 50px;
         font-family: var(--mono);
         font-size: 0.85rem;
@@ -540,6 +541,45 @@
 
         &:focus {
             border-color: var(--accent);
+        }
+
+        &::after {
+            content: "Promo ×" attr(value);
+            position: absolute;
+            top: 50%;
+            left: calc(100% + 8px);
+            translate: 0 -50%;
+            padding: 0.3rem 0.55rem;
+            font: 600 0.78rem var(--mono);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--muted);
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition:
+                opacity 0.15s,
+                color 0.2s,
+                border-color 0.2s;
+        }
+
+        &:focus::after {
+            opacity: 1;
+        }
+
+        &:not([value="1"])::after {
+            color: var(--accent);
+            border-color: var(--accent-30);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .cost-promo::after {
+            top: auto;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            translate: -50% 0;
         }
     }
 
