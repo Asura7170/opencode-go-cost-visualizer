@@ -526,7 +526,6 @@
     }
 
     .cost-promo {
-        position: relative;
         width: 50px;
         font-family: var(--mono);
         font-size: 0.85rem;
@@ -542,9 +541,14 @@
         &:focus {
             border-color: var(--accent);
         }
+    }
+
+    .cost-promo-wrap {
+        position: relative;
+        display: inline-flex;
 
         &::after {
-            content: "Promo ×" attr(value);
+            content: "Promo x" attr(data-value);
             position: absolute;
             top: 50%;
             left: calc(100% + 8px);
@@ -564,18 +568,18 @@
                 border-color 0.2s;
         }
 
-        &:focus::after {
+        &:focus-within::after {
             opacity: 1;
         }
 
-        &:not([value="1"])::after {
+        &:not([data-value="1"])::after {
             color: var(--accent);
             border-color: var(--accent-30);
         }
     }
 
     @media (max-width: 640px) {
-        .cost-promo::after {
+        .cost-promo-wrap::after {
             top: auto;
             bottom: calc(100% + 6px);
             left: 50%;
@@ -761,7 +765,7 @@
             grid-area: name;
         }
 
-        .cost-promo {
+        .cost-promo-wrap {
             grid-area: promo;
             justify-self: end;
         }
