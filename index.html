@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Compare, project, and analyze token costs across AI models for OpenCode Go."
+        />
+        <title>OpenCode Go — AI Model Cost Visualizer</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <header class="app-header">
+            <h1>
+                OpenCode Go <span class="tag">AI Model Cost Visualizer</span>
+            </h1>
+            <p class="subtitle">
+                Compare, project, and analyze token costs across models
+            </p>
+        </header>
+
+        <main class="layout">
+            <section class="panel controls" aria-label="Cost controls">
+                <h2 class="panel-title">Controls</h2>
+
+                <div class="control-group">
+                    <div class="control-head">
+                        <label for="inputTokensNum">Input Tokens</label>
+                        <input
+                            type="number"
+                            id="inputTokensNum"
+                            class="num-input"
+                            min="50"
+                            max="1000000"
+                            value="500"
+                        />
+                    </div>
+                    <input
+                        type="range"
+                        id="inputTokens"
+                        class="slider"
+                        min="50"
+                        max="1000000"
+                        step="50"
+                        value="500"
+                        aria-label="Input tokens"
+                    />
+                    <span class="control-foot">50 — 1,000,000</span>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-head">
+                        <label for="cacheReadTokensNum"
+                            >Cache Read Tokens</label
+                        >
+                        <input
+                            type="number"
+                            id="cacheReadTokensNum"
+                            class="num-input"
+                            min="0"
+                            max="1000000"
+                            value="100000"
+                        />
+                    </div>
+                    <input
+                        type="range"
+                        id="cacheReadTokens"
+                        class="slider"
+                        min="0"
+                        max="1000000"
+                        step="1"
+                        value="100000"
+                        aria-label="Cache read tokens"
+                    />
+                    <span class="control-foot"
+                        >Cached portion of total input (shared 1M context)</span
+                    >
+                    <output class="cache-helper" id="cacheHelper"
+                        >Total Input Tokens: 1,000</output
+                    >
+                </div>
+
+                <div class="control-group">
+                    <div class="control-head">
+                        <label for="outputTokensNum">Output Tokens</label>
+                        <input
+                            type="number"
+                            id="outputTokensNum"
+                            class="num-input"
+                            min="0"
+                            max="128000"
+                            value="200"
+                        />
+                    </div>
+                    <input
+                        type="range"
+                        id="outputTokens"
+                        class="slider"
+                        min="0"
+                        max="128000"
+                        step="10"
+                        value="200"
+                        aria-label="Output tokens"
+                    />
+                    <span class="control-foot">0 — 128,000</span>
+                </div>
+            </section>
+
+            <section class="panel dashboard" aria-label="Cost projections">
+                <h2 class="panel-title">Projections</h2>
+                <div class="cards">
+                    <div class="card card-row">
+                        <span class="card-label">Single Request</span>
+                        <output class="card-value" id="singleCost"
+                            >$0.0000</output
+                        >
+                        <div class="card-select-wrap">
+                            <label class="card-select-label" for="modelSelect"
+                                >Model</label
+                            >
+                            <select id="modelSelect" class="card-select">
+                                <option value="" disabled>
+                                    Select a model…
+                                </option>
+                            </select>
+                            <output class="card-auto" id="cardAuto" hidden
+                                >auto: cheapest</output
+                            >
+                        </div>
+                    </div>
+                    <div class="card card-row">
+                        <span class="card-label">Weekly Cost</span>
+                        <output class="card-value" id="weeklyCost"
+                            >$0.0000</output
+                        >
+                        <label class="card-input">
+                            <span>Requests / week</span>
+                            <input
+                                type="number"
+                                id="weeklyRequests"
+                                min="0"
+                                value="2500"
+                            />
+                        </label>
+                    </div>
+                    <div class="card card-row">
+                        <span class="card-label">Monthly Cost</span>
+                        <output class="card-value" id="monthlyCost"
+                            >$0.0000</output
+                        >
+                        <label class="card-input">
+                            <span>Requests / month</span>
+                            <input
+                                type="number"
+                                id="monthlyRequests"
+                                min="0"
+                                value="9000"
+                            />
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                class="panel comparison-panel"
+                aria-label="Cost comparison and pricing"
+            >
+                <div
+                    class="tabs"
+                    role="tablist"
+                    aria-label="Cost comparison and pricing"
+                >
+                    <button
+                        class="tab active"
+                        id="tab-comparison-btn"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="tab-comparison"
+                        tabindex="0"
+                    >
+                        Cost Comparison <span class="hint">ascending</span>
+                    </button>
+                    <button
+                        class="tab"
+                        id="tab-prices-btn"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="tab-prices"
+                        tabindex="-1"
+                    >
+                        Update Prices
+                    </button>
+                </div>
+
+                <div
+                    class="tab-content active"
+                    id="tab-comparison"
+                    role="tabpanel"
+                    aria-labelledby="tab-comparison-btn"
+                >
+                    <div class="cost-list" id="costList"></div>
+                </div>
+
+                <div
+                    class="tab-content"
+                    id="tab-prices"
+                    role="tabpanel"
+                    aria-labelledby="tab-prices-btn"
+                    hidden
+                >
+                    <p class="tab-desc">
+                        Paste raw tabular pricing data (tab or multi-space
+                        separated). Columns: Model, Input, Output, Cache Read.
+                        Currency symbols and dashes are cleaned automatically.
+                    </p>
+                    <textarea
+                        id="pricingInput"
+                        rows="7"
+                        placeholder="Model&#9;Input&#9;Output&#9;Cache Read&#10;GLM-5.2&#9;$1.40&#9;$4.40&#9;$0.26&#10;MiniMax M3&#9;$0.30&#9;$1.20&#9;$0.06"
+                    ></textarea>
+                    <div class="tab-actions">
+                        <button id="applyPrices" class="btn primary">
+                            Apply Prices
+                        </button>
+                        <button id="resetPrices" class="btn">
+                            Reset Defaults
+                        </button>
+                        <output class="status" id="priceStatus"></output>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <span>Pricing persisted locally via localStorage</span>
+        </footer>
+
+        <noscript>
+            <p class="noscript-msg">
+                This cost visualizer needs JavaScript enabled to compare model
+                costs.
+            </p>
+        </noscript>
+
+        <script type="module" src="app.js"></script>
+    </body>
+</html>
