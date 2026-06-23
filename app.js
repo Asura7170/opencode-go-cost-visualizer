@@ -314,6 +314,10 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
     row.appendChild(createEl("span", "cost-value", fmt(cost)));
 
+    const wrap = document.createElement("span");
+    wrap.className = "cost-promo-wrap";
+    wrap.setAttribute("data-value", m.promoDivisor || 1);
+
     const promo = document.createElement("input");
     promo.type = "number";
     promo.className = "cost-promo";
@@ -324,7 +328,9 @@ function renderCostComparison(effectiveModels, selectedResult) {
     promo.style.setProperty("--d", m.promoDivisor || 1);
     promo.dataset.model = m.name;
     promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
-    row.appendChild(promo);
+
+    wrap.appendChild(promo);
+    row.appendChild(wrap);
 
     container.appendChild(row);
   });
@@ -499,6 +505,8 @@ function setupCostListDelegation() {
     const v = clamp(Number(promo.value) || 1, 1, 1000);
     model.promoDivisor = v;
     promo.setAttribute("value", v);
+    const wrap = promo.closest(".cost-promo-wrap");
+    if (wrap) wrap.setAttribute("data-value", v);
     promo.style.setProperty("--d", v);
     saveModels();
     scheduleRender();
