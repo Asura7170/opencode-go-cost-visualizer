@@ -1,10 +1,8 @@
 const STORAGE_KEY = "opencode_prices";
-const SELECTED_MODEL_KEY = "opencode_selected_model";
 const QWEN_THRESHOLD = 256000;
 const LOW_TIER = "\u2264 256K tokens";
 const HIGH_TIER = "> 256K tokens";
 const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
-const PROMO_MODEL = "minimaxm3";
 
 const MAX_TOTAL_CONTEXT = 1_000_000;
 const MAX_OUTPUT = 128_000;
@@ -18,7 +16,7 @@ const defaultModels = [
   { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoDivisor: 1 },
   { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1 },
   { name: "MiMo V2.5 Pro", input: 1.74, output: 3.48, cacheRead: 0.0145, promoDivisor: 1 },
-  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 3 },
+  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, promoDivisor: 1 },
@@ -37,6 +35,10 @@ const state = {
   weeklyRequests: 300,
   monthlyRequests: 1000,
   selectedModelName: null,
+  filterText: "",
+  sortKey: "total",
+  sortDesc: false,
+  showPromo: false,
   models: []
 };
 
@@ -130,8 +132,7 @@ function parsePricingData(text) {
     const input = cleanNum(parts[1]);
     const output = cleanNum(parts[2]);
     const cacheRead = cleanNum(parts[3]);
-    const promoDivisor = normalizeName(name) === PROMO_MODEL ? 3 : 1;
-    out.push({ name, input, output, cacheRead, promoDivisor });
+    out.push({ name, input, output, cacheRead, promoDivisor: 1 });
   }
   return out;
 }
@@ -150,35 +151,18 @@ function loadModels() {
           promoDivisor:
             typeof m.promoDivisor === "number" && m.promoDivisor > 0
               ? m.promoDivisor
-              : normalizeName(m.name) === PROMO_MODEL ? 3 : 1
+              : 1
         }));
         return;
       }
     } catch {}
   }
   state.models = defaultModels.map((m) => ({ ...m }));
-  saveModels();
 }
 
 function saveModels() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.models));
-  } catch {}
-}
-
-function loadSelectedModel() {
-  try {
-    const saved = localStorage.getItem(SELECTED_MODEL_KEY);
-    if (!saved) return;
-    const target = normalizeName(saved);
-    const match = state.models.find((m) => normalizeName(m.name) === target);
-    if (match) state.selectedModelName = match.name;
-  } catch {}
-}
-
-function saveSelectedModel(name) {
-  try {
-    localStorage.setItem(SELECTED_MODEL_KEY, name);
   } catch {}
 }
 
@@ -214,6 +198,9 @@ function renderAll() {
   updateCacheHelper();
   syncModelSelect(effectiveModels, selectedResult);
   renderCostComparison(effectiveModels, selectedResult);
+  updateSortHint();
+  const promoToggle = $("promoToggle");
+  if (promoToggle) promoToggle.checked = state.showPromo;
 }
 
 function updateProjections(selectedResult) {
@@ -282,15 +269,42 @@ function renderCostComparison(effectiveModels, selectedResult) {
   const caret = active?.selectionStart ?? null;
 
   container.replaceChildren();
+  container.classList.toggle("hide-promo", !state.showPromo);
 
-  const eff = (effectiveModels ?? getEffectiveModels()).map((m) => ({
-    model: m,
-    cost: calculateCost(m, state.inputTokens, state.outputTokens, state.cacheReadTokens)
-  }));
-  eff.sort((a, b) => a.cost - b.cost);
+  const filter = state.filterText.trim().toLowerCase();
+
+  const eff = (effectiveModels ?? getEffectiveModels())
+    .map((m) => ({
+      model: m,
+      cost: calculateCost(m, state.inputTokens, state.outputTokens, state.cacheReadTokens)
+    }))
+    .filter(({ model: m }) => {
+      if (!filter) return true;
+      return m.name.toLowerCase().includes(filter);
+    });
+
+  eff.sort((a, b) => {
+    const key = state.sortKey;
+    const desc = state.sortDesc;
+    const da = a.model.promoDivisor || 1;
+    const db = b.model.promoDivisor || 1;
+    let cmp;
+    switch (key) {
+      case "total": cmp = a.cost - b.cost; break;
+      case "input": cmp = (a.model.input / da) - (b.model.input / db); break;
+      case "output": cmp = (a.model.output / da) - (b.model.output / db); break;
+      case "cache": cmp = (a.model.cacheRead / da) - (b.model.cacheRead / db); break;
+      case "name": cmp = a.model.name.localeCompare(b.model.name); break;
+      default: cmp = a.cost - b.cost;
+    }
+    return desc ? -cmp : cmp;
+  });
 
   if (!eff.length) {
-    container.appendChild(createEl("div", "cost-empty", "No models to display for the current token range."));
+    const msg = filter
+      ? `No models match "${state.filterText}".`
+      : "No models to display for the current token range.";
+    container.appendChild(createEl("div", "cost-empty", msg));
     return;
   }
 
@@ -314,23 +328,25 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
     row.appendChild(createEl("span", "cost-value", fmt(cost)));
 
-    const wrap = document.createElement("span");
-    wrap.className = "cost-promo-wrap";
-    wrap.setAttribute("data-value", m.promoDivisor || 1);
+    if (state.showPromo) {
+      const wrap = document.createElement("span");
+      wrap.className = "cost-promo-wrap";
+      wrap.setAttribute("data-value", m.promoDivisor || 1);
 
-    const promo = document.createElement("input");
-    promo.type = "number";
-    promo.className = "cost-promo";
-    promo.min = "1";
-    promo.step = "1";
-    promo.value = m.promoDivisor || 1;
-    promo.setAttribute("value", promo.value);
-    promo.style.setProperty("--d", m.promoDivisor || 1);
-    promo.dataset.model = m.name;
-    promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
+      const promo = document.createElement("input");
+      promo.type = "number";
+      promo.className = "cost-promo";
+      promo.min = "1";
+      promo.step = "1";
+      promo.value = m.promoDivisor || 1;
+      promo.setAttribute("value", promo.value);
+      promo.style.setProperty("--d", m.promoDivisor || 1);
+      promo.dataset.model = m.name;
+      promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
 
-    wrap.appendChild(promo);
-    row.appendChild(wrap);
+      wrap.appendChild(promo);
+      row.appendChild(wrap);
+    }
 
     container.appendChild(row);
   });
@@ -488,7 +504,6 @@ function setupModelSelect() {
     const name = select.value;
     if (!name) return;
     state.selectedModelName = name;
-    saveSelectedModel(name);
     renderAll();
   });
 }
@@ -508,14 +523,118 @@ function setupCostListDelegation() {
     const wrap = promo.closest(".cost-promo-wrap");
     if (wrap) wrap.setAttribute("data-value", v);
     promo.style.setProperty("--d", v);
-    saveModels();
     scheduleRender();
   });
 }
 
+function setupCostToolbar() {
+  const filterInput = $("costFilter");
+  const trigger = $("costSortTrigger");
+  const menu = $("costSortMenu");
+  const dropdown = $("costSort");
+
+  if (filterInput) {
+    filterInput.addEventListener("input", () => {
+      state.filterText = filterInput.value;
+      scheduleRender();
+    });
+  }
+
+  if (!trigger || !menu || !dropdown) return;
+
+  const triggerLabel = trigger.querySelector(".sort-trigger-label");
+  const triggerArrow = trigger.querySelector(".sort-trigger-arrow");
+
+  const LABELS = {
+    total: "Total Cost",
+    input: "Input Cost",
+    output: "Output Cost",
+    cache: "Cache Read Cost",
+    name: "Model Name"
+  };
+
+  function syncUI() {
+    const key = state.sortKey;
+    const arrow = state.sortDesc ? "\u2193" : "\u2191";
+    triggerLabel.textContent = LABELS[key] || "Total Cost";
+    triggerArrow.textContent = arrow;
+    menu.querySelectorAll(".sort-option").forEach((opt) => {
+      const isActive = opt.dataset.value === key;
+      opt.classList.toggle("active", isActive);
+      opt.setAttribute("aria-selected", isActive ? "true" : "false");
+      const arr = opt.querySelector(".sort-option-arrow");
+      if (arr) arr.textContent = isActive ? arrow : "";
+    });
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.toggle("open");
+    trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    menu.hidden = !isOpen;
+    syncUI();
+  });
+
+  menu.addEventListener("click", (e) => {
+    const option = e.target.closest(".sort-option");
+    if (!option) return;
+    const value = option.dataset.value;
+    if (value === state.sortKey) {
+      state.sortDesc = !state.sortDesc;
+    } else {
+      state.sortKey = value;
+      state.sortDesc = true;
+    }
+    syncUI();
+    scheduleRender();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+      menu.hidden = true;
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dropdown.classList.contains("open")) {
+      dropdown.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+      menu.hidden = true;
+      trigger.focus();
+    }
+  });
+
+  const promoToggle = $("promoToggle");
+  if (promoToggle) {
+    promoToggle.addEventListener("change", () => {
+      state.showPromo = promoToggle.checked;
+      scheduleRender();
+    });
+  }
+
+  syncUI();
+}
+
+const SORT_LABELS = {
+  total: "Total Cost",
+  input: "Input Cost",
+  output: "Output Cost",
+  cache: "Cache Read Cost",
+  name: "Model Name"
+};
+
+function updateSortHint() {
+  const el = $("sortHint");
+  if (!el) return;
+  const label = SORT_LABELS[state.sortKey] || "Total Cost";
+  const arrow = state.sortDesc ? "↓" : "↑";
+  el.textContent = `${label} ${arrow}`;
+}
+
 function init() {
   loadModels();
-  loadSelectedModel();
 
   state.inputTokens = clamp(
     Number($("inputTokensNum").value) || MIN_INPUT,
@@ -554,6 +673,7 @@ function init() {
   setupRequestInputs();
   setupModelSelect();
   setupCostListDelegation();
+  setupCostToolbar();
 
   syncContextCaps();
   renderAll();
