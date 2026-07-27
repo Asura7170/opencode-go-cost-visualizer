@@ -34,10 +34,10 @@ const state = {
   cacheReadTokens: 100000,
   weeklyRequests: 300,
   monthlyRequests: 1000,
-  selectedModelName: null,
+  selectedModelName: "DeepSeek V4 Pro",
   filterText: "",
   sortKey: "total",
-  sortDesc: true,
+  sortDesc: false,
   showPromo: false,
   models: []
 };
@@ -594,7 +594,18 @@ function setupColumnChecks() {
   const container = document.querySelector(".column-checks");
   if (!container) return;
 
-  container.addEventListener("change", () => {
+  container.addEventListener("change", (e) => {
+    const cb = e.target;
+    if (cb.type !== "checkbox") return;
+    if (cb.checked) {
+      state.sortKey = cb.dataset.col;
+      state.sortDesc = false;
+    } else if (!cb.checked && cb.dataset.col === state.sortKey) {
+      const checks = [...container.querySelectorAll('input[type="checkbox"]')];
+      const next = checks.find((c) => c.checked && c.dataset.col && c.dataset.col !== state.sortKey);
+      state.sortKey = next ? next.dataset.col : "name";
+      state.sortDesc = false;
+    }
     scheduleRender();
   });
 }
@@ -614,7 +625,7 @@ function setupHeaderSort() {
       state.sortDesc = !state.sortDesc;
     } else {
       state.sortKey = col;
-      state.sortDesc = true;
+      state.sortDesc = false;
     }
     scheduleRender();
   });
