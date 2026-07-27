@@ -7,12 +7,12 @@ const findModel = (name) => defaultModels.find((m) => m.name === name);
 
 const testCases = {
   "MiniMax M3": [
-    { totalInput: 156948, cacheRead: 155898, output: 685, expected: 0.0035 },
-    { totalInput: 159405, cacheRead: 159253, output: 99, expected: 0.0032 },
-    { totalInput: 180960, cacheRead: 180919, output: 10107, expected: 0.0077 },
-    { totalInput: 155679, cacheRead: 153179, output: 2011, expected: 0.0041 },
-    { totalInput: 153193, cacheRead: 150066, output: 63, expected: 0.0033 },
-    { totalInput: 157811, cacheRead: 1906, output: 1998, expected: 0.0164 }
+    { totalInput: 156948, cacheRead: 155898, output: 685, expected: 0.0105 },
+    { totalInput: 159405, cacheRead: 159253, output: 99, expected: 0.0097 },
+    { totalInput: 180960, cacheRead: 180919, output: 10107, expected: 0.0230 },
+    { totalInput: 155679, cacheRead: 153179, output: 2011, expected: 0.0124 },
+    { totalInput: 153193, cacheRead: 150066, output: 63, expected: 0.0100 },
+    { totalInput: 157811, cacheRead: 1906, output: 1998, expected: 0.0493 }
   ],
   "GLM-5.2": [
     { totalInput: 67725, cacheRead: 59549, output: 4121, expected: 0.0451 },

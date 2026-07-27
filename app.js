@@ -1,10 +1,8 @@
 const STORAGE_KEY = "opencode_prices";
-const SELECTED_MODEL_KEY = "opencode_selected_model";
 const QWEN_THRESHOLD = 256000;
 const LOW_TIER = "\u2264 256K tokens";
 const HIGH_TIER = "> 256K tokens";
 const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
-const PROMO_MODEL = "minimaxm3";
 
 const MAX_TOTAL_CONTEXT = 1_000_000;
 const MAX_OUTPUT = 128_000;
@@ -18,7 +16,7 @@ const defaultModels = [
   { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoDivisor: 1 },
   { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1 },
   { name: "MiMo V2.5 Pro", input: 1.74, output: 3.48, cacheRead: 0.0145, promoDivisor: 1 },
-  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 3 },
+  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
   { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, promoDivisor: 1 },
@@ -36,7 +34,11 @@ const state = {
   cacheReadTokens: 100000,
   weeklyRequests: 300,
   monthlyRequests: 1000,
-  selectedModelName: null,
+  selectedModelName: "DeepSeek V4 Pro",
+  filterText: "",
+  sortKey: "total",
+  sortDesc: false,
+  showPromo: false,
   models: []
 };
 
@@ -130,8 +132,7 @@ function parsePricingData(text) {
     const input = cleanNum(parts[1]);
     const output = cleanNum(parts[2]);
     const cacheRead = cleanNum(parts[3]);
-    const promoDivisor = normalizeName(name) === PROMO_MODEL ? 3 : 1;
-    out.push({ name, input, output, cacheRead, promoDivisor });
+    out.push({ name, input, output, cacheRead, promoDivisor: 1 });
   }
   return out;
 }
@@ -150,35 +151,18 @@ function loadModels() {
           promoDivisor:
             typeof m.promoDivisor === "number" && m.promoDivisor > 0
               ? m.promoDivisor
-              : normalizeName(m.name) === PROMO_MODEL ? 3 : 1
+              : 1
         }));
         return;
       }
     } catch {}
   }
   state.models = defaultModels.map((m) => ({ ...m }));
-  saveModels();
 }
 
 function saveModels() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.models));
-  } catch {}
-}
-
-function loadSelectedModel() {
-  try {
-    const saved = localStorage.getItem(SELECTED_MODEL_KEY);
-    if (!saved) return;
-    const target = normalizeName(saved);
-    const match = state.models.find((m) => normalizeName(m.name) === target);
-    if (match) state.selectedModelName = match.name;
-  } catch {}
-}
-
-function saveSelectedModel(name) {
-  try {
-    localStorage.setItem(SELECTED_MODEL_KEY, name);
   } catch {}
 }
 
@@ -214,6 +198,8 @@ function renderAll() {
   updateCacheHelper();
   syncModelSelect(effectiveModels, selectedResult);
   renderCostComparison(effectiveModels, selectedResult);
+  const promoToggle = $("promoToggle");
+  if (promoToggle) promoToggle.checked = state.showPromo;
 }
 
 function updateProjections(selectedResult) {
@@ -275,62 +261,136 @@ function syncModelSelect(effectiveModels, selectedResult) {
 
 function renderCostComparison(effectiveModels, selectedResult) {
   const container = $("costList");
-  if (!container) return;
+  const header = $("costHeader");
+  if (!container || !header) return;
 
   const active = document.activeElement;
   const preserveModel = active?.dataset?.model;
   const caret = active?.selectionStart ?? null;
 
-  container.replaceChildren();
+  const checksContainer = document.querySelector(".column-checks");
+  const checkEls = checksContainer ? [...checksContainer.querySelectorAll('input[type="checkbox"]')] : [];
+  const visibleCols = checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col);
 
-  const eff = (effectiveModels ?? getEffectiveModels()).map((m) => ({
-    model: m,
-    cost: calculateCost(m, state.inputTokens, state.outputTokens, state.cacheReadTokens)
-  }));
-  eff.sort((a, b) => a.cost - b.cost);
+  container.replaceChildren();
+  header.replaceChildren();
+  container.classList.toggle("hide-promo", !state.showPromo);
+
+  const filter = state.filterText.trim().toLowerCase();
+
+  const eff = (effectiveModels ?? getEffectiveModels())
+    .map((m) => {
+      const divisor = m.promoDivisor || 1;
+      const inputCost = (state.inputTokens * m.input) / 1_000_000 / divisor;
+      const outputCost = (state.outputTokens * m.output) / 1_000_000 / divisor;
+      const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / divisor;
+      const totalCost = inputCost + outputCost + cacheCost;
+      return {
+        model: m,
+        total: totalCost,
+        input: inputCost,
+        output: outputCost,
+        cache: cacheCost
+      };
+    })
+    .filter(({ model: m }) => {
+      if (!filter) return true;
+      return m.name.toLowerCase().includes(filter);
+    });
+
+  eff.sort((a, b) => {
+    const key = state.sortKey || "name";
+    const desc = state.sortDesc;
+    let cmp;
+    switch (key) {
+      case "total": cmp = a.total - b.total; break;
+      case "input": cmp = a.input - b.input; break;
+      case "output": cmp = a.output - b.output; break;
+      case "cache": cmp = a.cache - b.cache; break;
+      case "name": cmp = a.model.name.localeCompare(b.model.name); break;
+      default: cmp = a.total - b.total;
+    }
+    return desc ? -cmp : cmp;
+  });
 
   if (!eff.length) {
-    container.appendChild(createEl("div", "cost-empty", "No models to display for the current token range."));
+    header.style.display = "none";
+    const msg = filter
+      ? `No models match "${state.filterText}".`
+      : "No models to display for the current token range.";
+    container.appendChild(createEl("div", "cost-empty", msg));
     return;
   }
 
-  const maxCost = eff.reduce((max, r) => (r.cost > max ? r.cost : max), 0);
+  header.style.display = "";
+
+  const barKey = state.sortKey || "total";
+  const barMax = Math.max(...eff.map((r) => r[barKey]), 0);
+
+  const valueCols = visibleCols.length;
+  const promoCol = state.showPromo ? 1 : 0;
+  const gridCols = `minmax(140px, 0.2fr) 1fr` +
+    (valueCols > 0 ? ` repeat(${valueCols}, minmax(70px, auto))` : "") +
+    (promoCol > 0 ? " 60px" : "");
+
+  header.style.gridTemplateColumns = gridCols;
+
+  header.appendChild(createEl("span", "hdr-cell hdr-name sortable",
+    `Model${state.sortKey === "name" ? (state.sortDesc ? " \u2193" : " \u2191") : ""}`));
+  header.appendChild(createEl("span", "hdr-cell hdr-bar", "%"));
+
+  visibleCols.forEach((col) => {
+    const arrow = col === state.sortKey ? (state.sortDesc ? " \u2193" : " \u2191") : "";
+    const span = createEl("span", "hdr-cell hdr-val sortable", `${COL_SHORT[col]}${arrow}`);
+    span.dataset.col = col;
+    header.appendChild(span);
+  });
+  if (state.showPromo) {
+    header.appendChild(createEl("span", "hdr-cell hdr-val", "Promo"));
+  }
+
   const result = selectedResult ?? getSelectedModel(effectiveModels);
   const highlightedKey = result ? normalizeName(result.model.name) : null;
 
-  eff.forEach(({ model: m, cost }) => {
+  eff.forEach(({ model: m, total, input, output, cache }) => {
     const isHighlighted = highlightedKey && normalizeName(m.name) === highlightedKey;
-
     const row = createEl("div", `cost-row${isHighlighted ? " highlighted" : ""}`);
-    row.title = `${m.name} — ${fmt(cost)} per request`;
+    row.style.gridTemplateColumns = gridCols;
+    row.title = `${m.name} — ${fmt(total)} per request`;
 
     row.appendChild(createEl("span", "cost-name", m.name));
 
+    const barVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache })[state.sortKey] : total;
     const barWrap = createEl("div", "cost-bar-wrap");
     const bar = createEl("div", "cost-bar");
-    bar.style.width = `${maxCost > 0 ? (cost / maxCost) * 100 : 0}%`;
+    bar.style.width = `${barMax > 0 ? (barVal / barMax) * 100 : 0}%`;
     barWrap.appendChild(bar);
     row.appendChild(barWrap);
 
-    row.appendChild(createEl("span", "cost-value", fmt(cost)));
+    const vals = { total, input, output, cache };
+    visibleCols.forEach((col) => {
+      row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
+    });
 
-    const wrap = document.createElement("span");
-    wrap.className = "cost-promo-wrap";
-    wrap.setAttribute("data-value", m.promoDivisor || 1);
+    if (state.showPromo) {
+      const wrap = document.createElement("span");
+      wrap.className = "cost-promo-wrap";
+      wrap.setAttribute("data-value", m.promoDivisor || 1);
 
-    const promo = document.createElement("input");
-    promo.type = "number";
-    promo.className = "cost-promo";
-    promo.min = "1";
-    promo.step = "1";
-    promo.value = m.promoDivisor || 1;
-    promo.setAttribute("value", promo.value);
-    promo.style.setProperty("--d", m.promoDivisor || 1);
-    promo.dataset.model = m.name;
-    promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
+      const promo = document.createElement("input");
+      promo.type = "number";
+      promo.className = "cost-promo";
+      promo.min = "1";
+      promo.step = "1";
+      promo.value = m.promoDivisor || 1;
+      promo.setAttribute("value", promo.value);
+      promo.style.setProperty("--d", m.promoDivisor || 1);
+      promo.dataset.model = m.name;
+      promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
 
-    wrap.appendChild(promo);
-    row.appendChild(wrap);
+      wrap.appendChild(promo);
+      row.appendChild(wrap);
+    }
 
     container.appendChild(row);
   });
@@ -488,7 +548,6 @@ function setupModelSelect() {
     const name = select.value;
     if (!name) return;
     state.selectedModelName = name;
-    saveSelectedModel(name);
     renderAll();
   });
 }
@@ -508,14 +567,79 @@ function setupCostListDelegation() {
     const wrap = promo.closest(".cost-promo-wrap");
     if (wrap) wrap.setAttribute("data-value", v);
     promo.style.setProperty("--d", v);
-    saveModels();
     scheduleRender();
   });
 }
 
+function setupCostToolbar() {
+  const filterInput = $("costFilter");
+
+  if (filterInput) {
+    filterInput.addEventListener("input", () => {
+      state.filterText = filterInput.value;
+      scheduleRender();
+    });
+  }
+
+  const promoToggle = $("promoToggle");
+  if (promoToggle) {
+    promoToggle.addEventListener("change", () => {
+      state.showPromo = promoToggle.checked;
+      scheduleRender();
+    });
+  }
+}
+
+function setupColumnChecks() {
+  const container = document.querySelector(".column-checks");
+  if (!container) return;
+
+  container.addEventListener("change", (e) => {
+    const cb = e.target;
+    if (cb.type !== "checkbox") return;
+    if (cb.checked) {
+      state.sortKey = cb.dataset.col;
+      state.sortDesc = false;
+    } else if (!cb.checked && cb.dataset.col === state.sortKey) {
+      const checks = [...container.querySelectorAll('input[type="checkbox"]')];
+      const next = checks.find((c) => c.checked && c.dataset.col && c.dataset.col !== state.sortKey);
+      state.sortKey = next ? next.dataset.col : "name";
+      state.sortDesc = false;
+    }
+    scheduleRender();
+  });
+}
+
+function setupHeaderSort() {
+  const header = $("costHeader");
+  if (!header) return;
+
+  header.addEventListener("click", (e) => {
+    const cell = e.target.closest(".hdr-cell");
+    if (!cell || !cell.classList.contains("sortable")) return;
+
+    const col = cell.dataset.col || (cell.classList.contains("hdr-name") ? "name" : null);
+    if (!col) return;
+
+    if (col === state.sortKey) {
+      state.sortDesc = !state.sortDesc;
+    } else {
+      state.sortKey = col;
+      state.sortDesc = false;
+    }
+    scheduleRender();
+  });
+}
+
+const COL_SHORT = {
+  total: "$ Total",
+  input: "$ Input",
+  output: "$ Output",
+  cache: "$ Cache Read"
+};
+
 function init() {
   loadModels();
-  loadSelectedModel();
 
   state.inputTokens = clamp(
     Number($("inputTokensNum").value) || MIN_INPUT,
@@ -554,6 +678,9 @@ function init() {
   setupRequestInputs();
   setupModelSelect();
   setupCostListDelegation();
+  setupCostToolbar();
+  setupColumnChecks();
+  setupHeaderSort();
 
   syncContextCaps();
   renderAll();
