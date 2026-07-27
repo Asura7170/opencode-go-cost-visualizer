@@ -37,7 +37,7 @@ const state = {
   selectedModelName: null,
   filterText: "",
   sortKey: "total",
-  sortDesc: false,
+  sortDesc: true,
   showPromo: false,
   models: []
 };
@@ -198,7 +198,6 @@ function renderAll() {
   updateCacheHelper();
   syncModelSelect(effectiveModels, selectedResult);
   renderCostComparison(effectiveModels, selectedResult);
-  updateSortHint();
   const promoToggle = $("promoToggle");
   if (promoToggle) promoToggle.checked = state.showPromo;
 }
@@ -262,45 +261,60 @@ function syncModelSelect(effectiveModels, selectedResult) {
 
 function renderCostComparison(effectiveModels, selectedResult) {
   const container = $("costList");
-  if (!container) return;
+  const header = $("costHeader");
+  if (!container || !header) return;
 
   const active = document.activeElement;
   const preserveModel = active?.dataset?.model;
   const caret = active?.selectionStart ?? null;
 
+  const checksContainer = document.querySelector(".column-checks");
+  const checkEls = checksContainer ? [...checksContainer.querySelectorAll('input[type="checkbox"]')] : [];
+  const visibleCols = checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col);
+
   container.replaceChildren();
+  header.replaceChildren();
   container.classList.toggle("hide-promo", !state.showPromo);
 
   const filter = state.filterText.trim().toLowerCase();
 
   const eff = (effectiveModels ?? getEffectiveModels())
-    .map((m) => ({
-      model: m,
-      cost: calculateCost(m, state.inputTokens, state.outputTokens, state.cacheReadTokens)
-    }))
+    .map((m) => {
+      const divisor = m.promoDivisor || 1;
+      const inputCost = (state.inputTokens * m.input) / 1_000_000 / divisor;
+      const outputCost = (state.outputTokens * m.output) / 1_000_000 / divisor;
+      const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / divisor;
+      const totalCost = inputCost + outputCost + cacheCost;
+      return {
+        model: m,
+        total: totalCost,
+        input: inputCost,
+        output: outputCost,
+        cache: cacheCost
+      };
+    })
     .filter(({ model: m }) => {
       if (!filter) return true;
       return m.name.toLowerCase().includes(filter);
     });
 
   eff.sort((a, b) => {
-    const key = state.sortKey;
+    const key = state.sortKey || "name";
     const desc = state.sortDesc;
-    const da = a.model.promoDivisor || 1;
-    const db = b.model.promoDivisor || 1;
     let cmp;
     switch (key) {
-      case "total": cmp = a.cost - b.cost; break;
-      case "input": cmp = (a.model.input / da) - (b.model.input / db); break;
-      case "output": cmp = (a.model.output / da) - (b.model.output / db); break;
-      case "cache": cmp = (a.model.cacheRead / da) - (b.model.cacheRead / db); break;
+      case "total": cmp = a.total - b.total; break;
+      case "input": cmp = a.input - b.input; break;
+      case "output": cmp = a.output - b.output; break;
+      case "cache": cmp = a.cache - b.cache; break;
       case "name": cmp = a.model.name.localeCompare(b.model.name); break;
-      default: cmp = a.cost - b.cost;
+      default: cmp = a.total - b.total;
     }
     return desc ? -cmp : cmp;
   });
 
   if (!eff.length) {
+    header.style.display = "none";
     const msg = filter
       ? `No models match "${state.filterText}".`
       : "No models to display for the current token range.";
@@ -308,25 +322,55 @@ function renderCostComparison(effectiveModels, selectedResult) {
     return;
   }
 
-  const maxCost = eff.reduce((max, r) => (r.cost > max ? r.cost : max), 0);
+  header.style.display = "";
+
+  const barKey = state.sortKey || "total";
+  const barMax = Math.max(...eff.map((r) => r[barKey]), 0);
+
+  const valueCols = visibleCols.length;
+  const promoCol = state.showPromo ? 1 : 0;
+  const gridCols = `minmax(140px, 0.2fr) 1fr` +
+    (valueCols > 0 ? ` repeat(${valueCols}, minmax(70px, auto))` : "") +
+    (promoCol > 0 ? " 60px" : "");
+
+  header.style.gridTemplateColumns = gridCols;
+
+  header.appendChild(createEl("span", "hdr-cell hdr-name sortable",
+    `Model${state.sortKey === "name" ? (state.sortDesc ? " \u2193" : " \u2191") : ""}`));
+  header.appendChild(createEl("span", "hdr-cell hdr-bar", "%"));
+
+  visibleCols.forEach((col) => {
+    const arrow = col === state.sortKey ? (state.sortDesc ? " \u2193" : " \u2191") : "";
+    const span = createEl("span", "hdr-cell hdr-val sortable", `${COL_SHORT[col]}${arrow}`);
+    span.dataset.col = col;
+    header.appendChild(span);
+  });
+  if (state.showPromo) {
+    header.appendChild(createEl("span", "hdr-cell hdr-val", "Promo"));
+  }
+
   const result = selectedResult ?? getSelectedModel(effectiveModels);
   const highlightedKey = result ? normalizeName(result.model.name) : null;
 
-  eff.forEach(({ model: m, cost }) => {
+  eff.forEach(({ model: m, total, input, output, cache }) => {
     const isHighlighted = highlightedKey && normalizeName(m.name) === highlightedKey;
-
     const row = createEl("div", `cost-row${isHighlighted ? " highlighted" : ""}`);
-    row.title = `${m.name} — ${fmt(cost)} per request`;
+    row.style.gridTemplateColumns = gridCols;
+    row.title = `${m.name} — ${fmt(total)} per request`;
 
     row.appendChild(createEl("span", "cost-name", m.name));
 
+    const barVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache })[state.sortKey] : total;
     const barWrap = createEl("div", "cost-bar-wrap");
     const bar = createEl("div", "cost-bar");
-    bar.style.width = `${maxCost > 0 ? (cost / maxCost) * 100 : 0}%`;
+    bar.style.width = `${barMax > 0 ? (barVal / barMax) * 100 : 0}%`;
     barWrap.appendChild(bar);
     row.appendChild(barWrap);
 
-    row.appendChild(createEl("span", "cost-value", fmt(cost)));
+    const vals = { total, input, output, cache };
+    visibleCols.forEach((col) => {
+      row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
+    });
 
     if (state.showPromo) {
       const wrap = document.createElement("span");
@@ -529,9 +573,6 @@ function setupCostListDelegation() {
 
 function setupCostToolbar() {
   const filterInput = $("costFilter");
-  const trigger = $("costSortTrigger");
-  const menu = $("costSortMenu");
-  const dropdown = $("costSort");
 
   if (filterInput) {
     filterInput.addEventListener("input", () => {
@@ -540,72 +581,6 @@ function setupCostToolbar() {
     });
   }
 
-  if (!trigger || !menu || !dropdown) return;
-
-  const triggerLabel = trigger.querySelector(".sort-trigger-label");
-  const triggerArrow = trigger.querySelector(".sort-trigger-arrow");
-
-  const LABELS = {
-    total: "Total Cost",
-    input: "Input Cost",
-    output: "Output Cost",
-    cache: "Cache Read Cost",
-    name: "Model Name"
-  };
-
-  function syncUI() {
-    const key = state.sortKey;
-    const arrow = state.sortDesc ? "\u2193" : "\u2191";
-    triggerLabel.textContent = LABELS[key] || "Total Cost";
-    triggerArrow.textContent = arrow;
-    menu.querySelectorAll(".sort-option").forEach((opt) => {
-      const isActive = opt.dataset.value === key;
-      opt.classList.toggle("active", isActive);
-      opt.setAttribute("aria-selected", isActive ? "true" : "false");
-      const arr = opt.querySelector(".sort-option-arrow");
-      if (arr) arr.textContent = isActive ? arrow : "";
-    });
-  }
-
-  trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = dropdown.classList.toggle("open");
-    trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    menu.hidden = !isOpen;
-    syncUI();
-  });
-
-  menu.addEventListener("click", (e) => {
-    const option = e.target.closest(".sort-option");
-    if (!option) return;
-    const value = option.dataset.value;
-    if (value === state.sortKey) {
-      state.sortDesc = !state.sortDesc;
-    } else {
-      state.sortKey = value;
-      state.sortDesc = true;
-    }
-    syncUI();
-    scheduleRender();
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target)) {
-      dropdown.classList.remove("open");
-      trigger.setAttribute("aria-expanded", "false");
-      menu.hidden = true;
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && dropdown.classList.contains("open")) {
-      dropdown.classList.remove("open");
-      trigger.setAttribute("aria-expanded", "false");
-      menu.hidden = true;
-      trigger.focus();
-    }
-  });
-
   const promoToggle = $("promoToggle");
   if (promoToggle) {
     promoToggle.addEventListener("change", () => {
@@ -613,25 +588,44 @@ function setupCostToolbar() {
       scheduleRender();
     });
   }
-
-  syncUI();
 }
 
-const SORT_LABELS = {
-  total: "Total Cost",
-  input: "Input Cost",
-  output: "Output Cost",
-  cache: "Cache Read Cost",
-  name: "Model Name"
+function setupColumnChecks() {
+  const container = document.querySelector(".column-checks");
+  if (!container) return;
+
+  container.addEventListener("change", () => {
+    scheduleRender();
+  });
+}
+
+function setupHeaderSort() {
+  const header = $("costHeader");
+  if (!header) return;
+
+  header.addEventListener("click", (e) => {
+    const cell = e.target.closest(".hdr-cell");
+    if (!cell || !cell.classList.contains("sortable")) return;
+
+    const col = cell.dataset.col || (cell.classList.contains("hdr-name") ? "name" : null);
+    if (!col) return;
+
+    if (col === state.sortKey) {
+      state.sortDesc = !state.sortDesc;
+    } else {
+      state.sortKey = col;
+      state.sortDesc = true;
+    }
+    scheduleRender();
+  });
+}
+
+const COL_SHORT = {
+  total: "$ Total",
+  input: "$ Input",
+  output: "$ Output",
+  cache: "$ Cache Read"
 };
-
-function updateSortHint() {
-  const el = $("sortHint");
-  if (!el) return;
-  const label = SORT_LABELS[state.sortKey] || "Total Cost";
-  const arrow = state.sortDesc ? "↓" : "↑";
-  el.textContent = `${label} ${arrow}`;
-}
 
 function init() {
   loadModels();
@@ -674,6 +668,8 @@ function init() {
   setupModelSelect();
   setupCostListDelegation();
   setupCostToolbar();
+  setupColumnChecks();
+  setupHeaderSort();
 
   syncContextCaps();
   renderAll();

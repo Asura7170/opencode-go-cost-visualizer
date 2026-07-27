@@ -185,7 +185,6 @@
                         tabindex="0"
                     >
                         Cost Comparison
-                        <span class="hint" id="sortHint">Total Cost ↓</span>
                     </button>
                     <button
                         class="tab"
@@ -213,76 +212,25 @@
                             placeholder="Filter models…"
                             aria-label="Filter models by name"
                         />
-                        <div class="sort-group">
-                            <label class="sort-label">Sort by</label>
-                            <div class="sort-dropdown" id="costSort">
-                                <button
-                                    class="sort-trigger"
-                                    id="costSortTrigger"
-                                    aria-haspopup="listbox"
-                                    aria-expanded="false"
-                                >
-                                    <span class="sort-trigger-label"
-                                        >Total Cost</span
-                                    >
-                                    <span class="sort-trigger-arrow">↓</span>
-                                </button>
-                                <ul
-                                    class="sort-menu"
-                                    id="costSortMenu"
-                                    role="listbox"
-                                    hidden
-                                >
-                                    <li
-                                        role="option"
-                                        data-value="total"
-                                        class="sort-option active"
-                                        aria-selected="true"
-                                    >
-                                        Total Cost
-                                        <span class="sort-option-arrow"
-                                            >↓</span
-                                        >
-                                    </li>
-                                    <li
-                                        role="option"
-                                        data-value="input"
-                                        class="sort-option"
-                                        aria-selected="false"
-                                    >
-                                        Input Cost
-                                        <span class="sort-option-arrow"></span>
-                                    </li>
-                                    <li
-                                        role="option"
-                                        data-value="output"
-                                        class="sort-option"
-                                        aria-selected="false"
-                                    >
-                                        Output Cost
-                                        <span class="sort-option-arrow"></span>
-                                    </li>
-                                    <li
-                                        role="option"
-                                        data-value="cache"
-                                        class="sort-option"
-                                        aria-selected="false"
-                                    >
-                                        Cache Read Cost
-                                        <span class="sort-option-arrow"></span>
-                                    </li>
-                                    <li
-                                        role="option"
-                                        data-value="name"
-                                        class="sort-option"
-                                        aria-selected="false"
-                                    >
-                                        Model Name
-                                        <span class="sort-option-arrow"></span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                        <fieldset class="column-checks">
+                            <legend class="sr-only">Show columns</legend>
+                            <label class="col-check">
+                                <input type="checkbox" data-col="total" checked />
+                                Total Cost
+                            </label>
+                            <label class="col-check">
+                                <input type="checkbox" data-col="input" />
+                                Input Cost
+                            </label>
+                            <label class="col-check">
+                                <input type="checkbox" data-col="output" />
+                                Output Cost
+                            </label>
+                            <label class="col-check">
+                                <input type="checkbox" data-col="cache" />
+                                Cache Read Cost
+                            </label>
+                        </fieldset>
                         <label class="promo-toggle">
                             <input
                                 type="checkbox"
@@ -295,6 +243,7 @@
                             <span class="promo-toggle-text">Promo</span>
                         </label>
                     </div>
+                    <div class="cost-header" id="costHeader"></div>
                     <div class="cost-list hide-promo" id="costList"></div>
                 </div>
 
