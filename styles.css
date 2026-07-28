@@ -699,6 +699,10 @@
         text-align: right;
     }
 
+    .cost-cell--low {
+        color: var(--danger);
+    }
+
     .cost-header {
         display: grid;
         gap: 0.5rem;
@@ -816,6 +820,22 @@
 
     .cost-list.hide-promo .cost-promo-wrap {
         display: none;
+    }
+
+    .cost-value-wrap {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding-block: 0.15rem;
+    }
+
+    .cost-value-bar {
+        display: block;
+        height: 8px;
+        border-radius: 999px;
+        background: hsl(142, 75%, 45%);
+        transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+        min-width: 2px;
     }
 
     .tabs {

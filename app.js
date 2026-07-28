@@ -1,6 +1,6 @@
 const STORAGE_KEY = "opencode_prices";
 const QWEN_THRESHOLD = 256000;
-const LOW_TIER = "\u2264 256K tokens";
+const LOW_TIER = "< 256K tokens";
 const HIGH_TIER = "> 256K tokens";
 const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
 
@@ -14,22 +14,25 @@ const EXP_K_CACHE = 2.0;
 const EXP_K_OUTPUT = 3.0;
 
 const defaultModels = [
-  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1 },
-  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1 },
-  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, promoDivisor: 1 },
-  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoDivisor: 1 },
-  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1 },
-  { name: "MiMo V2.5 Pro", input: 1.74, output: 3.48, cacheRead: 0.0145, promoDivisor: 1 },
-  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
-  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
-  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1 },
-  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, promoDivisor: 1 },
-  { name: "Qwen3.7 Plus (\u2264 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, promoDivisor: 1 },
-  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, promoDivisor: 1 },
-  { name: "Qwen3.6 Plus (\u2264 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, promoDivisor: 1 },
-  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, promoDivisor: 1 },
-  { name: "DeepSeek V4 Pro", input: 1.74, output: 3.48, cacheRead: 0.0145, promoDivisor: 1 },
-  { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1 }
+  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
+  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
+  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
+  { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
+  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, promoDivisor: 1, usageValue: 60 },
+  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoDivisor: 1, usageValue: 60 },
+  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1, usageValue: 60 },
+  { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoDivisor: 1, usageValue: 15 },
+  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1, usageValue: 60 },
+  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
+  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.7 Plus (< 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, cacheWrite: 1.50, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.6 Plus (< 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, cacheWrite: 2.50, promoDivisor: 1, usageValue: 60 },
+  { name: "DeepSeek V4 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoDivisor: 1, usageValue: 15 },
+  { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1, usageValue: 60 },
+  { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, promoDivisor: 1, usageValue: 60 }
 ];
 
 const state = {
@@ -77,15 +80,16 @@ function fmt(n) {
 }
 
 function getEffectiveModels() {
+  return state.models;
+}
+
+function isQwenTierActive(name) {
   const totalInput = state.inputTokens + state.cacheReadTokens;
   const lowTier = totalInput <= QWEN_THRESHOLD;
-  return state.models.filter((m) => {
-    if (isQwenPlus(m.name)) {
-      if (m.name.includes(LOW_TIER)) return lowTier;
-      if (m.name.includes(HIGH_TIER)) return !lowTier;
-    }
-    return true;
-  });
+  if (!isQwenPlus(name)) return true;
+  if (name.includes(LOW_TIER)) return lowTier;
+  if (name.includes(HIGH_TIER)) return !lowTier;
+  return true;
 }
 
 function getSelectedModel(effectiveModels) {
@@ -96,13 +100,15 @@ function getSelectedModel(effectiveModels) {
     const match = eff.find((m) => normalizeName(m.name) === target);
     if (match) return { model: match, isAuto: false };
   }
-  let cheapest = eff[0];
+  const tierModels = eff.filter((m) => isQwenTierActive(m.name));
+  const pool = tierModels.length ? tierModels : eff;
+  let cheapest = pool[0];
   let minCost = calculateCost(cheapest, state.inputTokens, state.outputTokens, state.cacheReadTokens);
-  for (let i = 1; i < eff.length; i++) {
-    const c = calculateCost(eff[i], state.inputTokens, state.outputTokens, state.cacheReadTokens);
+  for (let i = 1; i < pool.length; i++) {
+    const c = calculateCost(pool[i], state.inputTokens, state.outputTokens, state.cacheReadTokens);
     if (c < minCost) {
       minCost = c;
-      cheapest = eff[i];
+      cheapest = pool[i];
     }
   }
   return { model: cheapest, isAuto: true };
@@ -149,7 +155,8 @@ function parsePricingData(text) {
     const input = cleanNum(parts[1]);
     const output = cleanNum(parts[2]);
     const cacheRead = cleanNum(parts[3]);
-    out.push({ name, input, output, cacheRead, promoDivisor: 1 });
+    const usageValue = cleanNum(parts[5]) || 60;
+    out.push({ name, input, output, cacheRead, usageValue, promoDivisor: 1 });
   }
   return out;
 }
@@ -165,10 +172,8 @@ function loadModels() {
           input: m.input,
           output: m.output,
           cacheRead: m.cacheRead,
-          promoDivisor:
-            typeof m.promoDivisor === "number" && m.promoDivisor > 0
-              ? m.promoDivisor
-              : 1
+          usageValue: typeof m.usageValue === "number" ? m.usageValue : 60,
+          promoDivisor: 1
         }));
         return;
       }
@@ -179,7 +184,14 @@ function loadModels() {
 
 function saveModels() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.models));
+    const slim = state.models.map((m) => ({
+      name: m.name,
+      input: m.input,
+      output: m.output,
+      cacheRead: m.cacheRead,
+      usageValue: m.usageValue
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
   } catch {}
 }
 
@@ -302,12 +314,14 @@ function renderCostComparison(effectiveModels, selectedResult) {
       const outputCost = (state.outputTokens * m.output) / 1_000_000 / divisor;
       const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / divisor;
       const totalCost = inputCost + outputCost + cacheCost;
+      const efficiency = (m.usageValue || 0) / 60;
       return {
         model: m,
         total: totalCost,
         input: inputCost,
         output: outputCost,
-        cache: cacheCost
+        cache: cacheCost,
+        value: efficiency
       };
     })
     .filter(({ model: m }) => {
@@ -324,6 +338,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
       case "input": cmp = a.input - b.input; break;
       case "output": cmp = a.output - b.output; break;
       case "cache": cmp = a.cache - b.cache; break;
+      case "value": cmp = a.value - b.value; break;
       case "name": cmp = a.model.name.localeCompare(b.model.name); break;
       default: cmp = a.total - b.total;
     }
@@ -369,24 +384,31 @@ function renderCostComparison(effectiveModels, selectedResult) {
   const result = selectedResult ?? getSelectedModel(effectiveModels);
   const highlightedKey = result ? normalizeName(result.model.name) : null;
 
-  eff.forEach(({ model: m, total, input, output, cache }) => {
+  eff.forEach(({ model: m, total, input, output, cache, value: eff }) => {
     const isHighlighted = highlightedKey && normalizeName(m.name) === highlightedKey;
-    const row = createEl("div", `cost-row${isHighlighted ? " highlighted" : ""}`);
+    const cls = `cost-row${isHighlighted ? " highlighted" : ""}`;
+    const row = createEl("div", cls);
+    row.style.opacity = isQwenTierActive(m.name) ? "" : "0.35";
     row.style.gridTemplateColumns = gridCols;
     row.title = `${m.name} — ${fmt(total)} per request`;
 
     row.appendChild(createEl("span", "cost-name", m.name));
 
-    const barVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache })[state.sortKey] : total;
+    const barVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache, value: eff })[state.sortKey] : total;
     const barWrap = createEl("div", "cost-bar-wrap");
     const bar = createEl("div", "cost-bar");
     bar.style.width = `${barMax > 0 ? (barVal / barMax) * 100 : 0}%`;
     barWrap.appendChild(bar);
     row.appendChild(barWrap);
 
-    const vals = { total, input, output, cache };
+    const vals = { total, input, output, cache, value: eff };
     visibleCols.forEach((col) => {
-      row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
+      if (col === "value") {
+        const cls = m.usageValue < 60 ? "cost-cell cost-cell--low" : "cost-cell";
+        row.appendChild(createEl("span", cls, `$${m.usageValue}`));
+      } else {
+        row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
+      }
     });
 
     if (state.showPromo) {
@@ -556,9 +578,9 @@ function setupImportHandlers() {
   $("resetPrices").addEventListener("click", () => {
     state.models = defaultModels.map((m) => ({ ...m }));
     lastSelectKey = "";
-    saveModels();
+    localStorage.removeItem(STORAGE_KEY);
     renderAll();
-    showStatus($("priceStatus"), "Default pricing restored.", true);
+    showStatus($("priceStatus"), "Local storage cleared, defaults restored.", true);
   });
 }
 
@@ -667,7 +689,8 @@ const COL_SHORT = {
   total: "$ Total",
   input: "$ Input",
   output: "$ Output",
-  cache: "$ Cache Read"
+  cache: "$ Cache Read",
+  value: "Value"
 };
 
 function init() {
