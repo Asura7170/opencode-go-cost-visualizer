@@ -118,16 +118,6 @@
         }
     }
 
-    .tick-highlight {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 18%;
-        width: 3px;
-        background: var(--accent);
-        border-radius: 1px;
-    }
-
     .header-inner {
         display: flex;
         align-items: baseline;
