@@ -6,9 +6,12 @@ const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
 
 const MAX_TOTAL_CONTEXT = 1_000_000;
 const MAX_OUTPUT = 128_000;
-const MIN_INPUT = 50;
+const MIN_INPUT = 1;
+const MIN_OUTPUT = 1;
 const MIN_CACHE = 0;
-const EXP_K = 2.5;
+const EXP_K_INPUT = 2.5;
+const EXP_K_CACHE = 2.0;
+const EXP_K_OUTPUT = 3.0;
 
 const defaultModels = [
   { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1 },
@@ -105,17 +108,17 @@ function getSelectedModel(effectiveModels) {
   return { model: cheapest, isAuto: true };
 }
 
-function sliderToTokens(pos, min, max, step) {
+function sliderToTokens(pos, min, max, step, k) {
   const fraction = Math.max(0, Math.min(1, pos / 100));
-  const raw = min + (max - min) * Math.pow(fraction, EXP_K);
+  const raw = min + (max - min) * Math.pow(fraction, k);
   const snapped = step > 1 ? Math.round(raw / step) * step : Math.round(raw);
   return clamp(snapped, min, max);
 }
 
-function tokensToSlider(val, min, max) {
+function tokensToSlider(val, min, max, k) {
   if (max <= min) return 0;
   const fraction = Math.max(0, Math.min(1, (val - min) / (max - min)));
-  return 100 * Math.pow(fraction, 1 / EXP_K);
+  return 100 * Math.pow(fraction, 1 / k);
 }
 
 const cleanNum = (val) => {
@@ -423,28 +426,30 @@ function renderCostComparison(effectiveModels, selectedResult) {
 function syncContextCaps() {
   const inputCap = Math.max(MIN_INPUT, MAX_TOTAL_CONTEXT - state.cacheReadTokens);
   const cacheCap = Math.max(MIN_CACHE, MAX_TOTAL_CONTEXT - state.inputTokens);
+  state.inputTokens = clamp(state.inputTokens, MIN_INPUT, inputCap);
+  state.cacheReadTokens = clamp(state.cacheReadTokens, MIN_CACHE, cacheCap);
   $("inputTokensNum").min = MIN_INPUT;
   $("inputTokensNum").max = inputCap;
-  $("inputTokens").value = tokensToSlider(state.inputTokens, MIN_INPUT, inputCap);
+  $("inputTokens").value = tokensToSlider(state.inputTokens, MIN_INPUT, inputCap, EXP_K_INPUT);
   $("cacheReadTokensNum").min = MIN_CACHE;
   $("cacheReadTokensNum").max = cacheCap;
-  $("cacheReadTokens").value = tokensToSlider(state.cacheReadTokens, MIN_CACHE, cacheCap);
+  $("cacheReadTokens").value = tokensToSlider(state.cacheReadTokens, MIN_CACHE, cacheCap, EXP_K_CACHE);
 }
 
 function setupOutputControl() {
   const slider = $("outputTokens");
   const num = $("outputTokensNum");
-  const STEP = 10;
+  const STEP = 1;
   const set = (val, source) => {
-    let v = clamp(Number(val), 0, MAX_OUTPUT);
-    if (!isFinite(v)) v = 0;
+    let v = clamp(Number(val), MIN_OUTPUT, MAX_OUTPUT);
+    if (!isFinite(v)) v = MIN_OUTPUT;
     state.outputTokens = v;
-    if (source !== "slider") slider.value = tokensToSlider(v, 0, MAX_OUTPUT);
+    if (source !== "slider") slider.value = tokensToSlider(v, MIN_OUTPUT, MAX_OUTPUT, EXP_K_OUTPUT);
     if (source !== "num") num.value = v;
     scheduleRender();
   };
   slider.addEventListener("input", () => {
-    const tokens = sliderToTokens(Number(slider.value), 0, MAX_OUTPUT, STEP);
+    const tokens = sliderToTokens(Number(slider.value), MIN_OUTPUT, MAX_OUTPUT, STEP, EXP_K_OUTPUT);
     set(tokens, "slider");
   });
   num.addEventListener("input", () => set(num.value, "num"));
@@ -455,7 +460,7 @@ function setupContextControls() {
   const inputNum = $("inputTokensNum");
   const cacheSlider = $("cacheReadTokens");
   const cacheNum = $("cacheReadTokensNum");
-  const INPUT_STEP = 50;
+  const INPUT_STEP = 1;
   const CACHE_STEP = 1;
 
   const inputCap = () => Math.max(MIN_INPUT, MAX_TOTAL_CONTEXT - state.cacheReadTokens);
@@ -466,7 +471,7 @@ function setupContextControls() {
     let v = clamp(Number(val), MIN_INPUT, cap);
     if (!isFinite(v)) v = MIN_INPUT;
     state.inputTokens = v;
-    if (source !== "slider") inputSlider.value = tokensToSlider(v, MIN_INPUT, cap);
+    if (source !== "slider") inputSlider.value = tokensToSlider(v, MIN_INPUT, cap, EXP_K_INPUT);
     if (source !== "num") inputNum.value = v;
     syncContextCaps();
     scheduleRender();
@@ -477,19 +482,19 @@ function setupContextControls() {
     let v = clamp(Number(val), MIN_CACHE, cap);
     if (!isFinite(v)) v = MIN_CACHE;
     state.cacheReadTokens = v;
-    if (source !== "slider") cacheSlider.value = tokensToSlider(v, MIN_CACHE, cap);
+    if (source !== "slider") cacheSlider.value = tokensToSlider(v, MIN_CACHE, cap, EXP_K_CACHE);
     if (source !== "num") cacheNum.value = v;
     syncContextCaps();
     scheduleRender();
   };
 
   inputSlider.addEventListener("input", () => {
-    const tokens = sliderToTokens(Number(inputSlider.value), MIN_INPUT, inputCap(), INPUT_STEP);
+    const tokens = sliderToTokens(Number(inputSlider.value), MIN_INPUT, inputCap(), INPUT_STEP, EXP_K_INPUT);
     setInput(tokens, "slider");
   });
   inputNum.addEventListener("input", () => setInput(inputNum.value, "num"));
   cacheSlider.addEventListener("input", () => {
-    const tokens = sliderToTokens(Number(cacheSlider.value), MIN_CACHE, cacheCap(), CACHE_STEP);
+    const tokens = sliderToTokens(Number(cacheSlider.value), MIN_CACHE, cacheCap(), CACHE_STEP, EXP_K_CACHE);
     setCache(tokens, "slider");
   });
   cacheNum.addEventListener("input", () => setCache(cacheNum.value, "num"));
@@ -674,8 +679,8 @@ function init() {
     MAX_TOTAL_CONTEXT
   );
   state.outputTokens = clamp(
-    Number($("outputTokensNum").value) || 0,
-    0,
+    Number($("outputTokensNum").value) || MIN_OUTPUT,
+    MIN_OUTPUT,
     MAX_OUTPUT
   );
   state.cacheReadTokens = clamp(
