@@ -761,8 +761,8 @@
         font-family: var(--mono);
         font-size: 0.85rem;
         background: var(--bg);
-        --d: 1;
-        color: if(style(--d: 1): var(--muted) ; else: var(--accent));
+        --promo-multiplier: 1;
+        color: if(style(--promo-multiplier: 1): var(--muted) ; else: var(--accent));
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
         padding: 0.3rem 0.5rem;

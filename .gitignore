@@ -28,3 +28,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# CommandCode
+.commandcode/
+
+# Lockfile (not needed for this static project)
+pnpm-lock.yaml

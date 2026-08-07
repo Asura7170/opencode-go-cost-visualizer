@@ -18,28 +18,28 @@ const EXP_K_CACHE = 2.0;
 const EXP_K_OUTPUT = 3.0;
 
 const defaultModels = [
-  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
-  { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25, promoDivisor: 1, usageValue: 15 },
-  { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 15 },
-  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
-  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
-  { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
-  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, promoDivisor: 1, usageValue: 60 },
-  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoDivisor: 1, usageValue: 60 },
-  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1, usageValue: 60 },
-  { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoDivisor: 1, usageValue: 15 },
-  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1, usageValue: 60 },
-  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
-  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50, promoDivisor: 1, usageValue: 15 },
-  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, cacheWrite: 1.50, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, cacheWrite: 2.50, promoDivisor: 1, usageValue: 60 },
-  { name: "DeepSeek V4 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoDivisor: 1, usageValue: 15 },
-  { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1, usageValue: 60 },
-  { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, promoDivisor: 1, usageValue: 60 }
+  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "DeepSeek V4 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, promoMultiplier: 1, monthlyLimitUsd: 60 }
 ];
 
 const state = {
@@ -76,8 +76,8 @@ function calculateCost(model, inputTokens, outputTokens, cacheReadTokens) {
   const uncachedCost = (inputTokens * model.input) / 1000000;
   const cacheReadCost = (cacheReadTokens * model.cacheRead) / 1000000;
   const outputCost = (outputTokens * model.output) / 1000000;
-  const divisor = model.promoDivisor || 1;
-  return (uncachedCost + cacheReadCost + outputCost) / divisor;
+  const multiplier = model.promoMultiplier || 1;
+  return (uncachedCost + cacheReadCost + outputCost) / multiplier;
 }
 
 function fmt(n) {
@@ -169,9 +169,8 @@ function parsePricingData(text) {
     const input = cleanNum(parts[1]);
     const output = cleanNum(parts[2]);
     const cacheRead = cleanNum(parts[3]);
-    const cacheWrite = cleanNum(parts[4]);
-    const usageValue = cleanNum(parts[5]) || 60;
-    out.push({ name, input, output, cacheRead, cacheWrite, usageValue, promoDivisor: 1 });
+    const monthlyLimitUsd = cleanNum(parts[4]) || 60;
+    out.push({ name, input, output, cacheRead, monthlyLimitUsd, promoMultiplier: 1 });
   }
   return out;
 }
@@ -187,9 +186,8 @@ function loadModels() {
           input: m.input,
           output: m.output,
           cacheRead: m.cacheRead,
-          cacheWrite: m.cacheWrite,
-          usageValue: typeof m.usageValue === "number" ? m.usageValue : 60,
-          promoDivisor: 1
+          monthlyLimitUsd: typeof m.monthlyLimitUsd === "number" ? m.monthlyLimitUsd : 60,
+          promoMultiplier: 1
         }));
         return;
       }
@@ -205,8 +203,7 @@ function saveModels() {
       input: m.input,
       output: m.output,
       cacheRead: m.cacheRead,
-      cacheWrite: m.cacheWrite,
-      usageValue: m.usageValue
+      monthlyLimitUsd: m.monthlyLimitUsd
     }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
   } catch {}
@@ -326,12 +323,12 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   const eff = (effectiveModels ?? getEffectiveModels())
     .map((m) => {
-      const divisor = m.promoDivisor || 1;
-      const inputCost = (state.inputTokens * m.input) / 1_000_000 / divisor;
-      const outputCost = (state.outputTokens * m.output) / 1_000_000 / divisor;
-      const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / divisor;
+      const multiplier = m.promoMultiplier || 1;
+      const inputCost = (state.inputTokens * m.input) / 1_000_000 / multiplier;
+      const outputCost = (state.outputTokens * m.output) / 1_000_000 / multiplier;
+      const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / multiplier;
       const totalCost = inputCost + outputCost + cacheCost;
-      const efficiency = (m.usageValue || 0) / 60;
+      const efficiency = (m.monthlyLimitUsd || 0) / 60;
       return {
         model: m,
         total: totalCost,
@@ -421,8 +418,8 @@ function renderCostComparison(effectiveModels, selectedResult) {
     const vals = { total, input, output, cache, value: eff };
     visibleCols.forEach((col) => {
       if (col === "value") {
-        const cls = m.usageValue < 60 ? "cost-cell cost-cell--low" : "cost-cell";
-        row.appendChild(createEl("span", cls, `$${m.usageValue}`));
+        const cls = m.monthlyLimitUsd < 60 ? "cost-cell cost-cell--low" : "cost-cell";
+        row.appendChild(createEl("span", cls, `$${m.monthlyLimitUsd}`));
       } else {
         row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
       }
@@ -431,18 +428,18 @@ function renderCostComparison(effectiveModels, selectedResult) {
     if (state.showPromo) {
       const wrap = document.createElement("span");
       wrap.className = "cost-promo-wrap";
-      wrap.setAttribute("data-value", m.promoDivisor || 1);
+      wrap.setAttribute("data-value", m.promoMultiplier || 1);
 
       const promo = document.createElement("input");
       promo.type = "number";
       promo.className = "cost-promo";
       promo.min = "1";
       promo.step = "1";
-      promo.value = m.promoDivisor || 1;
+      promo.value = m.promoMultiplier || 1;
       promo.setAttribute("value", promo.value);
-      promo.style.setProperty("--d", m.promoDivisor || 1);
+      promo.style.setProperty("--promo-multiplier", m.promoMultiplier || 1);
       promo.dataset.model = m.name;
-      promo.setAttribute("aria-label", `Promo divisor for ${m.name}`);
+      promo.setAttribute("aria-label", `Promo multiplier for ${m.name}`);
 
       wrap.appendChild(promo);
       row.appendChild(wrap);
@@ -633,11 +630,11 @@ function setupCostListDelegation() {
     const model = state.models.find((m) => m.name === modelName);
     if (!model) return;
     const v = clamp(Number(promo.value) || 1, 1, 1000);
-    model.promoDivisor = v;
+    model.promoMultiplier = v;
     promo.setAttribute("value", v);
     const wrap = promo.closest(".cost-promo-wrap");
     if (wrap) wrap.setAttribute("data-value", v);
-    promo.style.setProperty("--d", v);
+    promo.style.setProperty("--promo-multiplier", v);
     scheduleRender();
   });
 }
