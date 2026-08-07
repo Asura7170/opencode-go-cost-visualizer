@@ -1,8 +1,12 @@
 const STORAGE_KEY = "opencode_prices";
 const QWEN_THRESHOLD = 256000;
-const LOW_TIER = "< 256K tokens";
+const GPT_LUNA_THRESHOLD = 272000;
+const LOW_TIER = "<= 256K tokens";
 const HIGH_TIER = "> 256K tokens";
+const GPT_LUNA_LOW_TIER = "<= 272K tokens";
+const GPT_LUNA_HIGH_TIER = "> 272K tokens";
 const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
+const GPT_LUNA_MARKER = "GPT 5.6 Luna";
 
 const MAX_TOTAL_CONTEXT = 1_000_000;
 const MAX_OUTPUT = 128_000;
@@ -15,6 +19,8 @@ const EXP_K_OUTPUT = 3.0;
 
 const defaultModels = [
   { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
+  { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25, promoDivisor: 1, usageValue: 15 },
+  { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 15 },
   { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
   { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoDivisor: 1, usageValue: 60 },
   { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, promoDivisor: 1, usageValue: 15 },
@@ -25,10 +31,11 @@ const defaultModels = [
   { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoDivisor: 1, usageValue: 60 },
   { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
   { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50, promoDivisor: 1, usageValue: 15 },
   { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.7 Plus (< 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoDivisor: 1, usageValue: 60 },
   { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, cacheWrite: 1.50, promoDivisor: 1, usageValue: 60 },
-  { name: "Qwen3.6 Plus (< 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoDivisor: 1, usageValue: 60 },
+  { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoDivisor: 1, usageValue: 60 },
   { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, cacheWrite: 2.50, promoDivisor: 1, usageValue: 60 },
   { name: "DeepSeek V4 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoDivisor: 1, usageValue: 15 },
   { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoDivisor: 1, usageValue: 60 },
@@ -53,6 +60,7 @@ const $ = (id) => document.getElementById(id);
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const normalizeName = (s) => String(s).toLowerCase().replace(/[-_\s]/g, "");
 const isQwenPlus = (name) => QWEN_PLUS_MARKERS.some((m) => name.includes(m));
+const isGptLuna = (name) => name.includes(GPT_LUNA_MARKER);
 
 const tokenFormatter = new Intl.NumberFormat("en-US");
 const formatTokens = (n) => (Number.isFinite(n) ? tokenFormatter.format(n) : "0");
@@ -85,6 +93,12 @@ function getEffectiveModels() {
 
 function isQwenTierActive(name) {
   const totalInput = state.inputTokens + state.cacheReadTokens;
+  if (isGptLuna(name)) {
+    const lowTier = totalInput <= GPT_LUNA_THRESHOLD;
+    if (name.includes(GPT_LUNA_LOW_TIER)) return lowTier;
+    if (name.includes(GPT_LUNA_HIGH_TIER)) return !lowTier;
+    return true;
+  }
   const lowTier = totalInput <= QWEN_THRESHOLD;
   if (!isQwenPlus(name)) return true;
   if (name.includes(LOW_TIER)) return lowTier;
@@ -155,8 +169,9 @@ function parsePricingData(text) {
     const input = cleanNum(parts[1]);
     const output = cleanNum(parts[2]);
     const cacheRead = cleanNum(parts[3]);
+    const cacheWrite = cleanNum(parts[4]);
     const usageValue = cleanNum(parts[5]) || 60;
-    out.push({ name, input, output, cacheRead, usageValue, promoDivisor: 1 });
+    out.push({ name, input, output, cacheRead, cacheWrite, usageValue, promoDivisor: 1 });
   }
   return out;
 }
@@ -172,6 +187,7 @@ function loadModels() {
           input: m.input,
           output: m.output,
           cacheRead: m.cacheRead,
+          cacheWrite: m.cacheWrite,
           usageValue: typeof m.usageValue === "number" ? m.usageValue : 60,
           promoDivisor: 1
         }));
@@ -189,6 +205,7 @@ function saveModels() {
       input: m.input,
       output: m.output,
       cacheRead: m.cacheRead,
+      cacheWrite: m.cacheWrite,
       usageValue: m.usageValue
     }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
