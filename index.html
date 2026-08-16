@@ -123,10 +123,9 @@
                 <h2 class="panel-title">Projections</h2>
                 <div class="cards">
                     <div class="card card-row">
-                        <span class="card-label">Single Request</span>
-                        <output class="card-value" id="singleCost"
-                            >$0.0000</output
-                        >
+                        <span class="card-label">Requests every 5 hours</span>
+                        <output class="card-value" id="quota5h">—</output>
+                        <span class="card-hint" id="quota5hHint">$12 cap</span>
                         <div class="card-select-wrap">
                             <label class="card-select-label" for="modelSelect"
                                 >Model</label
@@ -137,39 +136,19 @@
                                 </option>
                             </select>
                             <output class="card-auto" id="cardAuto" hidden
-                                >auto: cheapest</output
+                                >auto: most requests</output
                             >
                         </div>
                     </div>
                     <div class="card card-row">
-                        <span class="card-label">Weekly Cost</span>
-                        <output class="card-value" id="weeklyCost"
-                            >$0.0000</output
-                        >
-                        <label class="card-input">
-                            <span>Requests / week</span>
-                            <input
-                                type="number"
-                                id="weeklyRequests"
-                                min="0"
-                                value="2500"
-                            />
-                        </label>
+                        <span class="card-label">Requests / week</span>
+                        <output class="card-value" id="quotaWeek">—</output>
+                        <span class="card-hint" id="quotaWeekHint">$30 cap</span>
                     </div>
                     <div class="card card-row">
-                        <span class="card-label">Monthly Cost</span>
-                        <output class="card-value" id="monthlyCost"
-                            >$0.0000</output
-                        >
-                        <label class="card-input">
-                            <span>Requests / month</span>
-                            <input
-                                type="number"
-                                id="monthlyRequests"
-                                min="0"
-                                value="9000"
-                            />
-                        </label>
+                        <span class="card-label">Requests / month</span>
+                        <output class="card-value" id="quotaMonth">—</output>
+                        <span class="card-hint" id="quotaMonthHint">$60 cap</span>
                     </div>
                 </div>
             </section>
@@ -223,23 +202,23 @@
                             <legend class="sr-only">Show columns</legend>
                             <label class="col-check">
                                 <input type="checkbox" data-col="total" checked />
-                                Total Cost
+                                Req Total
                             </label>
                             <label class="col-check">
                                 <input type="checkbox" data-col="input" />
-                                Input Cost
+                                Req Input
                             </label>
                             <label class="col-check">
                                 <input type="checkbox" data-col="output" />
-                                Output Cost
+                                Req Output
                             </label>
                             <label class="col-check">
                                 <input type="checkbox" data-col="cache" />
-                                Cache Read Cost
+                                Req Cache
                             </label>
                             <label class="col-check">
                                 <input type="checkbox" data-col="value" />
-                                Value
+                                Req Value
                             </label>
                         </fieldset>
                         <label class="promo-toggle">
