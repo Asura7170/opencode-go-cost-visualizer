@@ -373,13 +373,14 @@ function renderCostComparison(effectiveModels, selectedResult) {
       const reqInput = requestsFor(inputCost, qMonth);
       const reqOutput = requestsFor(outputCost, qMonth);
       const reqCache = requestsFor(cacheCost, qMonth);
+      const value = m.monthlyLimitUsd || 0;
       return {
         model: m,
         total: reqTotal,
         input: reqInput,
         output: reqOutput,
         cache: reqCache,
-        value: reqTotal,
+        value,
         _costTotal: totalCost,
         _costInput: inputCost,
         _costOutput: outputCost,
@@ -396,12 +397,16 @@ function renderCostComparison(effectiveModels, selectedResult) {
     const desc = state.sortDesc;
     let cmp;
     const rankVal = (v) => (v === Infinity ? Number.MAX_SAFE_INTEGER : v);
+    if (key === "value") {
+      cmp = a.value - b.value;
+      if (cmp === 0) cmp = a.model.name.localeCompare(b.model.name);
+      return desc ? -cmp : cmp;
+    }
     switch (key) {
       case "total": cmp = rankVal(a.total) - rankVal(b.total); break;
       case "input": cmp = rankVal(a.input) - rankVal(b.input); break;
       case "output": cmp = rankVal(a.output) - rankVal(b.output); break;
       case "cache": cmp = rankVal(a.cache) - rankVal(b.cache); break;
-      case "value": cmp = rankVal(a.value) - rankVal(b.value); break;
       case "name": cmp = a.model.name.localeCompare(b.model.name); break;
       default: cmp = rankVal(a.total) - rankVal(b.total);
     }
@@ -422,7 +427,9 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   const barKey = state.sortKey || "total";
   const finiteForBar = (v) => (v === Infinity ? Number.MAX_SAFE_INTEGER : (Number.isFinite(v) ? v : 0));
-  const barMax = Math.max(...eff.map((r) => r[barKey] === "name" ? 0 : finiteForBar(r[barKey])), 0);
+  const barMax = barKey === "value"
+    ? Math.max(...eff.map((r) => r.value), 0)
+    : Math.max(...eff.map((r) => r[barKey] === "name" ? 0 : finiteForBar(r[barKey])), 0);
 
   const valueCols = visibleCols.length;
   const promoCol = state.showPromo ? 1 : 0;
@@ -461,7 +468,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
     row.appendChild(createEl("span", "cost-name", m.name));
 
-    const rawBarVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache, value: eff })[state.sortKey] : total;
+    const rawBarVal = (state.sortKey && state.sortKey !== "name") ? (state.sortKey === "value" ? eff : ({ total, input, output, cache })[state.sortKey]) : total;
     const barVal = rawBarVal === Infinity ? Number.MAX_SAFE_INTEGER : (Number.isFinite(rawBarVal) ? rawBarVal : 0);
     const barWrap = createEl("div", "cost-bar-wrap");
     const bar = createEl("div", "cost-bar");
@@ -471,15 +478,22 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
     const vals = { total, input, output, cache, value: eff };
     visibleCols.forEach((col) => {
-      const v = vals[col];
-      const cell = createEl("span", "cost-cell", formatRequests(v));
-      const costForCol = costMap[col];
-      if (isFinite(costForCol) && costForCol > 0) {
-        cell.title = `${quotaHint} cap @ ${fmt(costForCol)}/req`;
-      } else if (v === Infinity) {
-        cell.title = `${quotaHint} cap · cost-free`;
+      if (col === "value") {
+        const cls = `cost-cell${(m.monthlyLimitUsd || 0) < 60 ? " cost-cell--low" : ""}`;
+        const cell = createEl("span", cls, formatQuotaUsd(m.monthlyLimitUsd || 0));
+        cell.title = `${quotaHint} monthly cap`;
+        row.appendChild(cell);
+      } else {
+        const v = vals[col];
+        const cell = createEl("span", "cost-cell", formatRequests(v));
+        const costForCol = costMap[col];
+        if (isFinite(costForCol) && costForCol > 0) {
+          cell.title = `${quotaHint} cap @ ${fmt(costForCol)}/req`;
+        } else if (v === Infinity) {
+          cell.title = `${quotaHint} cap · cost-free`;
+        }
+        row.appendChild(cell);
       }
-      row.appendChild(cell);
     });
 
     if (state.showPromo) {
@@ -752,7 +766,7 @@ const COL_SHORT = {
   input: "Req Input",
   output: "Req Output",
   cache: "Req Cache",
-  value: "Req Value"
+  value: "Value"
 };
 
 function init() {
