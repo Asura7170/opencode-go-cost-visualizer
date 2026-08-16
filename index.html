@@ -123,7 +123,7 @@
                 <h2 class="panel-title">Projections</h2>
                 <div class="cards">
                     <div class="card card-row">
-                        <span class="card-label">Requests every 5 hours</span>
+                        <span class="card-label">Requests / 5 hours</span>
                         <output class="card-value" id="quota5h">—</output>
                         <span class="card-hint" id="quota5hHint">$12 cap</span>
                         <div class="card-select-wrap">
@@ -216,10 +216,7 @@
                                 <input type="checkbox" data-col="cache" />
                                 Req Cache
                             </label>
-                            <label class="col-check">
-                                <input type="checkbox" data-col="value" checked />
-                                Value
-                            </label>
+                            <span class="col-check col-check--fixed" aria-hidden="true">Value</span>
                         </fieldset>
                         <label class="promo-toggle">
                             <input

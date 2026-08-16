@@ -51,7 +51,7 @@ const state = {
   selectedModelName: "DeepSeek V4 Pro",
   filterText: "",
   sortKey: "total",
-  sortDesc: true,
+  sortDesc: false,
   showPromo: false,
   models: []
 };
@@ -107,8 +107,14 @@ function formatQuotaUsd(n) {
 function formatRequests(n) {
   if (!isFinite(n)) return n === Infinity ? "∞" : "0";
   if (n <= 0) return "0";
-  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
-  if (n >= 1000) return `${Math.round(n / 1000)}K`;
+  if (n >= 1_000_000) {
+    const m = (n / 1_000_000).toFixed(1).replace(/\.0$/, "");
+    return `${m}M`;
+  }
+  if (n >= 1000) {
+    const k = (n / 1000).toFixed(1).replace(/\.0$/, "");
+    return `${k}K`;
+  }
   return tokenFormatter.format(Math.floor(n));
 }
 
@@ -353,7 +359,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   const checksContainer = document.querySelector(".column-checks");
   const checkEls = checksContainer ? [...checksContainer.querySelectorAll('input[type="checkbox"]')] : [];
-  const visibleCols = checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col);
+  const visibleCols = [...checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col), "value"];
 
   container.replaceChildren();
   header.replaceChildren();
@@ -445,7 +451,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   visibleCols.forEach((col) => {
     const arrow = col === state.sortKey ? (state.sortDesc ? " \u2193" : " \u2191") : "";
-    const span = createEl("span", "hdr-cell hdr-val sortable", `${COL_SHORT[col]}${arrow}`);
+    const span = createEl("span", `hdr-cell hdr-val${col === "value" ? " sortable" : " sortable"}`, `${COL_SHORT[col]}${arrow}`);
     span.dataset.col = col;
     header.appendChild(span);
   });
