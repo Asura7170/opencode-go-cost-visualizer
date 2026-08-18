@@ -302,11 +302,7 @@ function updateProjections(selectedResult) {
       el.textContent = formatRequests(req);
       el.title = isFinite(cost) && cost > 0 ? `${formatQuotaUsd(quota)} cap @ ${fmt(cost)}/req` : `${formatQuotaUsd(quota)} cap`;
     }
-    if (hint) {
-      const pct = Math.round((QUOTA_FRACTIONS[w] ?? 1) * 100);
-      const pctLabel = pct < 100 ? ` · ${pct}% of month` : "";
-      hint.textContent = `${fmt(cost)}/req · ${formatQuotaUsd(quota)} cap${pctLabel}`;
-    }
+    if (hint) hint.textContent = `${fmt(cost)}/req · ${formatQuotaUsd(quota)} cap`;
   });
 }
 

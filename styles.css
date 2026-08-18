@@ -303,8 +303,28 @@
 
     .card-row {
         display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.25rem;
+        grid-template-columns: 1fr 120px;
+        grid-template-rows: auto auto;
+        gap: 0.25rem 0.5rem;
+
+        & .card-label {
+            grid-column: 1;
+            grid-row: 1;
+            align-self: center;
+        }
+
+        & .card-value {
+            grid-column: 2;
+            grid-row: 1 / -1;
+            align-self: center;
+            justify-self: stretch;
+            text-align: center;
+        }
+
+        & .card-hint {
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
     }
 
     .card {
@@ -979,6 +999,18 @@
 
         .card-value {
             font-size: 1.2rem;
+        }
+
+        .card-row {
+            grid-template-columns: 1fr;
+
+            & .card-value {
+                justify-self: start;
+            }
+
+            & .card-hint {
+                grid-column: 1;
+            }
         }
 
         .cost-list .cost-row {
