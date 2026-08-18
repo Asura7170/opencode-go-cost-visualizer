@@ -17,6 +17,8 @@ const EXP_K_INPUT = 2.5;
 const EXP_K_CACHE = 2.0;
 const EXP_K_OUTPUT = 3.0;
 
+const QUOTA_FRACTIONS = { fiveHours: 0.2, week: 0.5, month: 1.0 };
+
 const defaultModels = [
   { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, promoMultiplier: 1, monthlyLimitUsd: 15 },
@@ -46,8 +48,6 @@ const state = {
   inputTokens: 1000,
   outputTokens: 2000,
   cacheReadTokens: 100000,
-  weeklyRequests: 300,
-  monthlyRequests: 1000,
   selectedModelName: "DeepSeek V4 Pro",
   filterText: "",
   sortKey: "total",
@@ -87,6 +87,37 @@ function fmt(n) {
   return `$${n.toFixed(4)}`;
 }
 
+function quotaForWindow(monthlyLimitUsd, window) {
+  const f = QUOTA_FRACTIONS[window] ?? 1;
+  return (Number(monthlyLimitUsd) || 0) * f;
+}
+
+function requestsFor(cost, quota) {
+  if (!isFinite(quota) || quota <= 0) return 0;
+  if (!isFinite(cost) || cost <= 0) return Infinity;
+  return Math.floor(quota / cost);
+}
+
+function formatQuotaUsd(n) {
+  if (!isFinite(n) || n === 0) return "$0";
+  const fixed = n.toFixed(2).replace(/\.00$/, "");
+  return `$${fixed}`;
+}
+
+function formatRequests(n) {
+  if (!isFinite(n)) return n === Infinity ? "∞" : "0";
+  if (n <= 0) return "0";
+  if (n >= 1_000_000) {
+    const m = (n / 1_000_000).toFixed(1).replace(/\.0$/, "");
+    return `${m}M`;
+  }
+  if (n >= 1000) {
+    const k = (n / 1000).toFixed(1).replace(/\.0$/, "");
+    return `${k}K`;
+  }
+  return tokenFormatter.format(Math.floor(n));
+}
+
 function getEffectiveModels() {
   return state.models;
 }
@@ -116,16 +147,20 @@ function getSelectedModel(effectiveModels) {
   }
   const tierModels = eff.filter((m) => isQwenTierActive(m.name));
   const pool = tierModels.length ? tierModels : eff;
-  let cheapest = pool[0];
-  let minCost = calculateCost(cheapest, state.inputTokens, state.outputTokens, state.cacheReadTokens);
+  let best = pool[0];
+  let bestReq = requestsFor(calculateCost(best, state.inputTokens, state.outputTokens, state.cacheReadTokens), best.monthlyLimitUsd || 0);
+  let bestCost = calculateCost(best, state.inputTokens, state.outputTokens, state.cacheReadTokens);
   for (let i = 1; i < pool.length; i++) {
-    const c = calculateCost(pool[i], state.inputTokens, state.outputTokens, state.cacheReadTokens);
-    if (c < minCost) {
-      minCost = c;
-      cheapest = pool[i];
+    const m = pool[i];
+    const c = calculateCost(m, state.inputTokens, state.outputTokens, state.cacheReadTokens);
+    const req = requestsFor(c, m.monthlyLimitUsd || 0);
+    if (req > bestReq || (req === bestReq && c < bestCost)) {
+      bestReq = req;
+      bestCost = c;
+      best = m;
     }
   }
-  return { model: cheapest, isAuto: true };
+  return { model: best, isAuto: true };
 }
 
 function sliderToTokens(pos, min, max, step, k) {
@@ -247,17 +282,28 @@ function renderAll() {
 
 function updateProjections(selectedResult) {
   const result = selectedResult ?? getSelectedModel();
+  const ids = ["quota5h", "quotaWeek", "quotaMonth"];
+  const hintIds = ["quota5hHint", "quotaWeekHint", "quotaMonthHint"];
+  const windows = ["fiveHours", "week", "month"];
   if (!result) {
-    $("singleCost").textContent = "$0.0000";
-    $("weeklyCost").textContent = "$0.0000";
-    $("monthlyCost").textContent = "$0.0000";
+    ids.forEach((id) => { const el = $(id); if (el) el.textContent = "0"; });
+    hintIds.forEach((id) => { const el = $(id); if (el) el.textContent = ""; });
     return;
   }
   const { model: selected } = result;
   const cost = calculateCost(selected, state.inputTokens, state.outputTokens, state.cacheReadTokens);
-  $("singleCost").textContent = fmt(cost);
-  $("weeklyCost").textContent = fmt(cost * (state.weeklyRequests || 0));
-  $("monthlyCost").textContent = fmt(cost * (state.monthlyRequests || 0));
+  const mLimit = selected.monthlyLimitUsd || 0;
+  windows.forEach((w, i) => {
+    const quota = quotaForWindow(mLimit, w);
+    const req = requestsFor(cost, quota);
+    const el = $(ids[i]);
+    const hint = $(hintIds[i]);
+    if (el) {
+      el.textContent = formatRequests(req);
+      el.title = isFinite(cost) && cost > 0 ? `${formatQuotaUsd(quota)} cap @ ${fmt(cost)}/req` : `${formatQuotaUsd(quota)} cap`;
+    }
+    if (hint) hint.textContent = `${fmt(cost)}/req · ${formatQuotaUsd(quota)} cap`;
+  });
 }
 
 function updateCacheHelper() {
@@ -313,7 +359,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   const checksContainer = document.querySelector(".column-checks");
   const checkEls = checksContainer ? [...checksContainer.querySelectorAll('input[type="checkbox"]')] : [];
-  const visibleCols = checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col);
+  const visibleCols = [...checkEls.filter((cb) => cb.checked).map((cb) => cb.dataset.col), "value"];
 
   container.replaceChildren();
   header.replaceChildren();
@@ -328,14 +374,23 @@ function renderCostComparison(effectiveModels, selectedResult) {
       const outputCost = (state.outputTokens * m.output) / 1_000_000 / multiplier;
       const cacheCost = (state.cacheReadTokens * m.cacheRead) / 1_000_000 / multiplier;
       const totalCost = inputCost + outputCost + cacheCost;
-      const efficiency = (m.monthlyLimitUsd || 0) / 60;
+      const qMonth = m.monthlyLimitUsd || 0;
+      const reqTotal = requestsFor(totalCost, qMonth);
+      const reqInput = requestsFor(inputCost, qMonth);
+      const reqOutput = requestsFor(outputCost, qMonth);
+      const reqCache = requestsFor(cacheCost, qMonth);
+      const value = m.monthlyLimitUsd || 0;
       return {
         model: m,
-        total: totalCost,
-        input: inputCost,
-        output: outputCost,
-        cache: cacheCost,
-        value: efficiency
+        total: reqTotal,
+        input: reqInput,
+        output: reqOutput,
+        cache: reqCache,
+        value,
+        _costTotal: totalCost,
+        _costInput: inputCost,
+        _costOutput: outputCost,
+        _costCache: cacheCost
       };
     })
     .filter(({ model: m }) => {
@@ -347,15 +402,21 @@ function renderCostComparison(effectiveModels, selectedResult) {
     const key = state.sortKey || "name";
     const desc = state.sortDesc;
     let cmp;
-    switch (key) {
-      case "total": cmp = a.total - b.total; break;
-      case "input": cmp = a.input - b.input; break;
-      case "output": cmp = a.output - b.output; break;
-      case "cache": cmp = a.cache - b.cache; break;
-      case "value": cmp = a.value - b.value; break;
-      case "name": cmp = a.model.name.localeCompare(b.model.name); break;
-      default: cmp = a.total - b.total;
+    const rankVal = (v) => (v === Infinity ? Number.MAX_SAFE_INTEGER : v);
+    if (key === "value") {
+      cmp = a.value - b.value;
+      if (cmp === 0) cmp = a.model.name.localeCompare(b.model.name);
+      return desc ? -cmp : cmp;
     }
+    switch (key) {
+      case "total": cmp = rankVal(a.total) - rankVal(b.total); break;
+      case "input": cmp = rankVal(a.input) - rankVal(b.input); break;
+      case "output": cmp = rankVal(a.output) - rankVal(b.output); break;
+      case "cache": cmp = rankVal(a.cache) - rankVal(b.cache); break;
+      case "name": cmp = a.model.name.localeCompare(b.model.name); break;
+      default: cmp = rankVal(a.total) - rankVal(b.total);
+    }
+    if (cmp === 0 && key !== "name") cmp = a.model.name.localeCompare(b.model.name);
     return desc ? -cmp : cmp;
   });
 
@@ -371,12 +432,15 @@ function renderCostComparison(effectiveModels, selectedResult) {
   header.style.display = "";
 
   const barKey = state.sortKey || "total";
-  const barMax = Math.max(...eff.map((r) => r[barKey]), 0);
+  const finiteForBar = (v) => (v === Infinity ? Number.MAX_SAFE_INTEGER : (Number.isFinite(v) ? v : 0));
+  const barMax = barKey === "value"
+    ? Math.max(...eff.map((r) => r.value), 0)
+    : Math.max(...eff.map((r) => r[barKey] === "name" ? 0 : finiteForBar(r[barKey])), 0);
 
   const valueCols = visibleCols.length;
   const promoCol = state.showPromo ? 1 : 0;
   const gridCols = `minmax(140px, 0.2fr) 1fr` +
-    (valueCols > 0 ? ` repeat(${valueCols}, minmax(70px, max-content))` : "") +
+    (valueCols > 0 ? ` repeat(${valueCols}, minmax(50px, max-content))` : "") +
     (promoCol > 0 ? " 60px" : "");
 
   header.style.gridTemplateColumns = gridCols;
@@ -387,7 +451,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
 
   visibleCols.forEach((col) => {
     const arrow = col === state.sortKey ? (state.sortDesc ? " \u2193" : " \u2191") : "";
-    const span = createEl("span", "hdr-cell hdr-val sortable", `${COL_SHORT[col]}${arrow}`);
+    const span = createEl("span", `hdr-cell hdr-val${col === "value" ? " sortable" : " sortable"}`, `${COL_SHORT[col]}${arrow}`);
     span.dataset.col = col;
     header.appendChild(span);
   });
@@ -398,17 +462,20 @@ function renderCostComparison(effectiveModels, selectedResult) {
   const result = selectedResult ?? getSelectedModel(effectiveModels);
   const highlightedKey = result ? normalizeName(result.model.name) : null;
 
-  eff.forEach(({ model: m, total, input, output, cache, value: eff }) => {
+  eff.forEach(({ model: m, total, input, output, cache, value: eff, _costTotal, _costInput, _costOutput, _costCache }) => {
     const isHighlighted = highlightedKey && normalizeName(m.name) === highlightedKey;
     const cls = `cost-row${isHighlighted ? " highlighted" : ""}`;
     const row = createEl("div", cls);
     row.style.opacity = isQwenTierActive(m.name) ? "" : "0.35";
     row.style.gridTemplateColumns = gridCols;
-    row.title = `${m.name} — ${fmt(total)} per request`;
+    const costMap = { total: _costTotal, input: _costInput, output: _costOutput, cache: _costCache, value: _costTotal };
+    const quotaHint = formatQuotaUsd(m.monthlyLimitUsd || 0);
+    row.title = `${m.name} — ${fmt(_costTotal)} per request · ${quotaHint} monthly cap`;
 
     row.appendChild(createEl("span", "cost-name", m.name));
 
-    const barVal = (state.sortKey && state.sortKey !== "name") ? ({ total, input, output, cache, value: eff })[state.sortKey] : total;
+    const rawBarVal = (state.sortKey && state.sortKey !== "name") ? (state.sortKey === "value" ? eff : ({ total, input, output, cache })[state.sortKey]) : total;
+    const barVal = rawBarVal === Infinity ? Number.MAX_SAFE_INTEGER : (Number.isFinite(rawBarVal) ? rawBarVal : 0);
     const barWrap = createEl("div", "cost-bar-wrap");
     const bar = createEl("div", "cost-bar");
     bar.style.width = `${barMax > 0 ? (barVal / barMax) * 100 : 0}%`;
@@ -418,10 +485,20 @@ function renderCostComparison(effectiveModels, selectedResult) {
     const vals = { total, input, output, cache, value: eff };
     visibleCols.forEach((col) => {
       if (col === "value") {
-        const cls = m.monthlyLimitUsd < 60 ? "cost-cell cost-cell--low" : "cost-cell";
-        row.appendChild(createEl("span", cls, `$${m.monthlyLimitUsd}`));
+        const cls = `cost-cell${(m.monthlyLimitUsd || 0) < 60 ? " cost-cell--low" : ""}`;
+        const cell = createEl("span", cls, formatQuotaUsd(m.monthlyLimitUsd || 0));
+        cell.title = `${quotaHint} monthly cap`;
+        row.appendChild(cell);
       } else {
-        row.appendChild(createEl("span", "cost-cell", fmt(vals[col])));
+        const v = vals[col];
+        const cell = createEl("span", "cost-cell", formatRequests(v));
+        const costForCol = costMap[col];
+        if (isFinite(costForCol) && costForCol > 0) {
+          cell.title = `${quotaHint} cap @ ${fmt(costForCol)}/req`;
+        } else if (v === Infinity) {
+          cell.title = `${quotaHint} cap · cost-free`;
+        }
+        row.appendChild(cell);
       }
     });
 
@@ -598,16 +675,7 @@ function setupImportHandlers() {
   });
 }
 
-function setupRequestInputs() {
-  $("weeklyRequests").addEventListener("input", (e) => {
-    state.weeklyRequests = clamp(Number(e.target.value) || 0, 0, 1e9);
-    scheduleRender();
-  });
-  $("monthlyRequests").addEventListener("input", (e) => {
-    state.monthlyRequests = clamp(Number(e.target.value) || 0, 0, 1e9);
-    scheduleRender();
-  });
-}
+function setupRequestInputs() {}
 
 function setupModelSelect() {
   const select = $("modelSelect");
@@ -700,10 +768,10 @@ function setupHeaderSort() {
 }
 
 const COL_SHORT = {
-  total: "$ Total",
-  input: "$ Input",
-  output: "$ Output",
-  cache: "$ Cache Read",
+  total: "Req Total",
+  input: "Req Input",
+  output: "Req Output",
+  cache: "Req Cache",
   value: "Value"
 };
 
@@ -724,16 +792,6 @@ function init() {
     Number($("cacheReadTokensNum").value) || MIN_CACHE,
     MIN_CACHE,
     MAX_TOTAL_CONTEXT
-  );
-  state.weeklyRequests = clamp(
-    Number($("weeklyRequests").value) || 0,
-    0,
-    1e9
-  );
-  state.monthlyRequests = clamp(
-    Number($("monthlyRequests").value) || 0,
-    0,
-    1e9
   );
 
   if (state.inputTokens + state.cacheReadTokens > MAX_TOTAL_CONTEXT) {

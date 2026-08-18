@@ -285,32 +285,45 @@
         min-height: 0;
     }
 
+    .dashboard-model {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+
+        & .card-select {
+            flex: 1;
+            min-width: 0;
+        }
+
+        & .card-select-label {
+            white-space: nowrap;
+        }
+    }
+
     .card-row {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 120px;
         grid-template-rows: auto auto;
-        gap: 0.25rem;
+        gap: 0.25rem 0.5rem;
 
         & .card-label {
             grid-column: 1;
             grid-row: 1;
-            align-self: start;
+            align-self: center;
         }
 
         & .card-value {
-            grid-column: 1;
-            grid-row: 2;
-            align-self: end;
-            justify-self: start;
+            grid-column: 2;
+            grid-row: 1 / -1;
+            align-self: center;
+            justify-self: stretch;
+            text-align: center;
         }
 
-        & .card-input,
-        & .card-select-wrap {
-            grid-column: 2;
-            grid-row: 1 / span 2;
-            align-self: center;
-            justify-self: end;
-            text-align: end;
+        & .card-hint {
+            grid-column: 1 / -1;
+            grid-row: 2;
         }
     }
 
@@ -459,6 +472,13 @@
         font-size: 0.7rem;
         color: var(--muted);
         font-family: var(--mono);
+    }
+
+    .card-hint {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--muted);
+        line-height: 1.4;
     }
 
     @starting-style {
@@ -983,23 +1003,15 @@
 
         .card-row {
             grid-template-columns: 1fr;
-            grid-template-areas:
-                "label"
-                "value"
-                "action";
-
-            & .card-label {
-                grid-area: label;
-            }
 
             & .card-value {
-                grid-area: value;
+                grid-column: 1;
+                grid-row: auto;
+                justify-self: start;
             }
 
-            & .card-input,
-            & .card-select-wrap {
-                grid-area: action;
-                justify-self: stretch;
+            & .card-hint {
+                grid-column: 1;
             }
         }
 
