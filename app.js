@@ -13,9 +13,9 @@ const MAX_OUTPUT = 128_000;
 const MIN_INPUT = 1;
 const MIN_OUTPUT = 1;
 const MIN_CACHE = 0;
-const EXP_K_INPUT = 2.5;
+const EXP_K_INPUT = 3.0;
 const EXP_K_CACHE = 2.0;
-const EXP_K_OUTPUT = 3.0;
+const EXP_K_OUTPUT = 4.0;
 
 const QUOTA_FRACTIONS = { fiveHours: 0.2, week: 0.5, month: 1.0 };
 
