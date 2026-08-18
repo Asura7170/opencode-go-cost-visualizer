@@ -285,33 +285,26 @@
         min-height: 0;
     }
 
+    .dashboard-model {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+
+        & .card-select {
+            flex: 1;
+            min-width: 0;
+        }
+
+        & .card-select-label {
+            white-space: nowrap;
+        }
+    }
+
     .card-row {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
+        grid-template-columns: 1fr;
         gap: 0.25rem;
-
-        & .card-label {
-            grid-column: 1;
-            grid-row: 1;
-            align-self: start;
-        }
-
-        & .card-value {
-            grid-column: 1;
-            grid-row: 2;
-            align-self: end;
-            justify-self: start;
-        }
-
-        & .card-input,
-        & .card-select-wrap {
-            grid-column: 2;
-            grid-row: 1 / span 2;
-            align-self: center;
-            justify-self: end;
-            text-align: end;
-        }
     }
 
     .card {
@@ -465,8 +458,7 @@
         font-family: var(--mono);
         font-size: 0.72rem;
         color: var(--muted);
-        grid-column: 1;
-        line-height: 1;
+        line-height: 1.4;
     }
 
     @starting-style {
@@ -987,28 +979,6 @@
 
         .card-value {
             font-size: 1.2rem;
-        }
-
-        .card-row {
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "label"
-                "value"
-                "action";
-
-            & .card-label {
-                grid-area: label;
-            }
-
-            & .card-value {
-                grid-area: value;
-            }
-
-            & .card-input,
-            & .card-select-wrap {
-                grid-area: action;
-                justify-self: stretch;
-            }
         }
 
         .cost-list .cost-row {

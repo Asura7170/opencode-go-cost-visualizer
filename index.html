@@ -121,24 +121,24 @@
 
             <section class="panel dashboard" aria-label="Cost projections">
                 <h2 class="panel-title">Projections</h2>
+                <div class="dashboard-model">
+                    <label class="card-select-label" for="modelSelect"
+                        >Model</label
+                    >
+                    <select id="modelSelect" class="card-select">
+                        <option value="" disabled>
+                            Select a model…
+                        </option>
+                    </select>
+                    <output class="card-auto" id="cardAuto" hidden
+                        >auto: most requests</output
+                    >
+                </div>
                 <div class="cards">
                     <div class="card card-row">
                         <span class="card-label">Requests / 5 hours</span>
                         <output class="card-value" id="quota5h">—</output>
                         <span class="card-hint" id="quota5hHint">$12 cap</span>
-                        <div class="card-select-wrap">
-                            <label class="card-select-label" for="modelSelect"
-                                >Model</label
-                            >
-                            <select id="modelSelect" class="card-select">
-                                <option value="" disabled>
-                                    Select a model…
-                                </option>
-                            </select>
-                            <output class="card-auto" id="cardAuto" hidden
-                                >auto: most requests</output
-                            >
-                        </div>
                     </div>
                     <div class="card card-row">
                         <span class="card-label">Requests / week</span>
