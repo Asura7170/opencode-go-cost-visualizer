@@ -1005,6 +1005,8 @@
             grid-template-columns: 1fr;
 
             & .card-value {
+                grid-column: 1;
+                grid-row: auto;
                 justify-self: start;
             }
 
