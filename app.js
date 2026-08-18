@@ -440,7 +440,7 @@ function renderCostComparison(effectiveModels, selectedResult) {
   const valueCols = visibleCols.length;
   const promoCol = state.showPromo ? 1 : 0;
   const gridCols = `minmax(140px, 0.2fr) 1fr` +
-    (valueCols > 0 ? ` repeat(${valueCols}, minmax(70px, max-content))` : "") +
+    (valueCols > 0 ? ` repeat(${valueCols}, minmax(50px, max-content))` : "") +
     (promoCol > 0 ? " 60px" : "");
 
   header.style.gridTemplateColumns = gridCols;
