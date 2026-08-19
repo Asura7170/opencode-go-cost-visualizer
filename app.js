@@ -48,7 +48,7 @@ const state = {
   inputTokens: 1000,
   outputTokens: 2000,
   cacheReadTokens: 100000,
-  selectedModelName: "DeepSeek V4 Pro",
+  selectedModelName: "DeepSeek V4 Flash",
   filterText: "",
   sortKey: "total",
   sortDesc: false,
@@ -799,6 +799,7 @@ function init() {
   }
 
   setupOutputControl();
+  $("outputTokens").value = tokensToSlider(state.outputTokens, MIN_OUTPUT, MAX_OUTPUT, EXP_K_OUTPUT);
   setupContextControls();
   setupTabs();
   setupImportHandlers();
