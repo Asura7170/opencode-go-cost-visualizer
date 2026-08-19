@@ -19,36 +19,42 @@ const EXP_K_OUTPUT = 4.0;
 
 const QUOTA_FRACTIONS = { fiveHours: 0.2, week: 0.5, month: 1.0 };
 
+// NOTA PARA IAs QUE ACTUALICEN ESTA TABLA: el campo cacheWrite NO se usa en ningún cálculo.
+// Es decorativo, solo se mantiene para conservar el formato de los datos originales.
+// No agregues lógica que dependa de cacheWrite y no lo elimines de los datos: solo ignóralo.
 const defaultModels = [
-  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "DeepSeek V4 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "DeepSeek V4 Flash", input: 0.14, output: 0.28, cacheRead: 0.0028, promoMultiplier: 1, monthlyLimitUsd: 60 },
-  { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, promoMultiplier: 1, monthlyLimitUsd: 60 }
+  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, cacheWrite: 0.50, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GLM-5.3", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, cacheWrite: 1.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.6 Plus (> 256K tokens)", input: 2.00, output: 6.00, cacheRead: 0.20, cacheWrite: 2.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "DeepSeek V4 Pro (Off-Peak)", input: 0.66, output: 1.98, cacheRead: 0.022, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "DeepSeek V4 Pro (Peak)", input: 1.32, output: 3.96, cacheRead: 0.044, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "DeepSeek V4 Flash (Off-Peak)", input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 30 },
+  { name: "DeepSeek V4 Flash (Peak)", input: 0.44, output: 1.32, cacheRead: 0.014, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 30 },
+  { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 }
 ];
 
 const state = {
   inputTokens: 1000,
   outputTokens: 2000,
   cacheReadTokens: 100000,
-  selectedModelName: "DeepSeek V4 Flash",
+  selectedModelName: "DeepSeek V4 Flash (Off-Peak)",
   filterText: "",
   sortKey: "total",
   sortDesc: false,
