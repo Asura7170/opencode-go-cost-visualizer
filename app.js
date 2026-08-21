@@ -37,6 +37,7 @@ const defaultModels = [
   { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Muse Spark 1.2 Contributor", input: 0.10, output: 0.20, cacheRead: 0.002, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
