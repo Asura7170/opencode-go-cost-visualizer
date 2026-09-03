@@ -1,12 +1,16 @@
 const STORAGE_KEY = "opencode_prices";
 const QWEN_THRESHOLD = 256000;
 const GPT_LUNA_THRESHOLD = 272000;
+const GROK_THRESHOLD = 200000;
 const LOW_TIER = "<= 256K tokens";
 const HIGH_TIER = "> 256K tokens";
 const GPT_LUNA_LOW_TIER = "<= 272K tokens";
 const GPT_LUNA_HIGH_TIER = "> 272K tokens";
+const GROK_LOW_TIER = "<= 200K tokens";
+const GROK_HIGH_TIER = "> 200K tokens";
 const QWEN_PLUS_MARKERS = ["Qwen3.7 Plus", "Qwen3.6 Plus"];
 const GPT_LUNA_MARKER = "GPT 5.6 Luna";
+const GROK_MARKER = "Grok 4.6";
 
 const MAX_TOTAL_CONTEXT = 1_000_000;
 const MAX_OUTPUT = 128_000;
@@ -23,23 +27,28 @@ const QUOTA_FRACTIONS = { fiveHours: 0.2, week: 0.5, month: 1.0 };
 // Es decorativo, solo se mantiene para conservar el formato de los datos originales.
 // No agregues lógica que dependa de cacheWrite y no lo elimines de los datos: solo ignóralo.
 const defaultModels = [
-  { name: "Grok 4.5", input: 2.00, output: 6.00, cacheRead: 0.30, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Grok 4.6 (<= 200K tokens)", input: 2.00, output: 6.00, cacheRead: 0.50, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Grok 4.6 (> 200K tokens)", input: 4.00, output: 12.00, cacheRead: 1.00, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "GPT 5.6 Luna (<= 272K tokens)", input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "GPT 5.6 Luna (> 272K tokens)", input: 0.40, output: 1.80, cacheRead: 0.04, cacheWrite: 0.50, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "GLM-5.3-Flash", input: 0.15, output: 0.50, cacheRead: 0.03, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "GLM-5.3", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "GLM-5.2", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "GLM-5.1", input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Kimi K3", input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "Kimi K2.7 Code", input: 0.95, output: 4.00, cacheRead: 0.19, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Kimi K2.6", input: 0.95, output: 4.00, cacheRead: 0.16, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "LongCat-2.0", input: 0.30, output: 1.20, cacheRead: 0.006, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiMo V2.5", input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiMo V2.5 Pro", input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "MiniMax M3", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiniMax M2.7", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "MiniMax M2.5", input: 0.30, output: 1.20, cacheRead: 0.06, cacheWrite: 0.375, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Muse Spark 1.3 Contributor", input: 0.10, output: 0.20, cacheRead: 0.002, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Muse Spark 1.2 Contributor", input: 0.10, output: 0.20, cacheRead: 0.002, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Qwen3.8 Max", input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50, promoMultiplier: 1, monthlyLimitUsd: 15 },
-  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoMultiplier: 1, monthlyLimitUsd: 60 },
+  { name: "Qwen3.8 Flash", input: 0.15, output: 0.47, cacheRead: 0.016, cacheWrite: 0.20, promoMultiplier: 1, monthlyLimitUsd: 30 },
+  { name: "Qwen3.7 Max", input: 2.50, output: 7.50, cacheRead: 0.50, cacheWrite: 3.125, promoMultiplier: 1, monthlyLimitUsd: 30 },
   { name: "Qwen3.7 Plus (<= 256K tokens)", input: 0.40, output: 1.60, cacheRead: 0.04, cacheWrite: 0.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Qwen3.7 Plus (> 256K tokens)", input: 1.20, output: 4.80, cacheRead: 0.12, cacheWrite: 1.50, promoMultiplier: 1, monthlyLimitUsd: 60 },
   { name: "Qwen3.6 Plus (<= 256K tokens)", input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625, promoMultiplier: 1, monthlyLimitUsd: 60 },
@@ -48,6 +57,9 @@ const defaultModels = [
   { name: "DeepSeek V4 Pro (Peak)", input: 1.32, output: 3.96, cacheRead: 0.044, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
   { name: "DeepSeek V4 Flash (Off-Peak)", input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 30 },
   { name: "DeepSeek V4 Flash (Peak)", input: 0.44, output: 1.32, cacheRead: 0.014, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 30 },
+  { name: "DeepSeek V4 Flash Vision Exp (Off-Peak)", input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "DeepSeek V4 Flash Vision Exp (Peak)", input: 0.44, output: 1.32, cacheRead: 0.014, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 15 },
+  { name: "Hy4 preview", input: 0.834, output: 2.501, cacheRead: 0.042, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 30 },
   { name: "Hy3", input: 0.14, output: 0.58, cacheRead: 0.035, cacheWrite: 0, promoMultiplier: 1, monthlyLimitUsd: 60 }
 ];
 
@@ -68,6 +80,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const normalizeName = (s) => String(s).toLowerCase().replace(/[-_\s]/g, "");
 const isQwenPlus = (name) => QWEN_PLUS_MARKERS.some((m) => name.includes(m));
 const isGptLuna = (name) => name.includes(GPT_LUNA_MARKER);
+const isGrok = (name) => name.includes(GROK_MARKER);
 
 const tokenFormatter = new Intl.NumberFormat("en-US");
 const formatTokens = (n) => (Number.isFinite(n) ? tokenFormatter.format(n) : "0");
@@ -135,6 +148,12 @@ function isQwenTierActive(name) {
     const lowTier = totalInput <= GPT_LUNA_THRESHOLD;
     if (name.includes(GPT_LUNA_LOW_TIER)) return lowTier;
     if (name.includes(GPT_LUNA_HIGH_TIER)) return !lowTier;
+    return true;
+  }
+  if (isGrok(name)) {
+    const lowTier = totalInput <= GROK_THRESHOLD;
+    if (name.includes(GROK_LOW_TIER)) return lowTier;
+    if (name.includes(GROK_HIGH_TIER)) return !lowTier;
     return true;
   }
   const lowTier = totalInput <= QWEN_THRESHOLD;
