@@ -511,7 +511,8 @@ function renderCostComparison(effectiveModels, selectedResult) {
     const vals = { total, input, output, cache, value: eff };
     visibleCols.forEach((col) => {
       if (col === "value") {
-        const cls = `cost-cell${(m.monthlyLimitUsd || 0) < 60 ? " cost-cell--low" : ""}`;
+        const limit = m.monthlyLimitUsd || 0;
+        const cls = `cost-cell${limit < 60 ? (limit <= 15 ? " cost-cell--low" : " cost-cell--mid") : ""}`;
         const cell = createEl("span", cls, formatQuotaUsd(m.monthlyLimitUsd || 0));
         cell.title = `${quotaHint} monthly cap`;
         row.appendChild(cell);
